@@ -1985,6 +1985,15 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
   }, [activeProject, activeSubproject])
 
   useEffect(() => {
+    if (!showLayoutsPopover) return
+    function handleClose() {
+      setShowLayoutsPopover(false)
+    }
+    window.addEventListener('mousedown', handleClose)
+    return () => window.removeEventListener('mousedown', handleClose)
+  }, [showLayoutsPopover])
+
+  useEffect(() => {
     if (!folderContextMenu) return
     function handleCloseMenu() {
       setFolderContextMenu(null)
