@@ -76,16 +76,16 @@ function normalizePathFlagKey(value) {
 }
 
 const CENTER_PANEL_OPTIONS = [
-  { key: 'todo', label: 'Task List', icon: '[TL]' },
-  { key: 'inProgress', label: 'Subproject Browser', icon: '[SB]' },
-  { key: 'quickLinks', label: 'Quick Access Links', icon: '[QL]' },
-  { key: 'selectedFolder', label: 'Selected Folder', icon: '[SF]' },
-  { key: 'recentFiles', label: 'Recent Files', icon: '[RF]' },
-  { key: 'flagged', label: 'Flagged', icon: '[FG]' },
-  { key: 'timeline', label: 'Project Timeline', icon: '[TM]' },
-  { key: 'timesheet', label: 'Project Timesheet', icon: '[TS]' },
-  { key: 'templates', label: 'Templates', icon: '[TP]' },
-  { key: 'plainNotes', label: 'Notes', icon: '[NT]' },
+  { key: 'todo', label: 'Task List', icon: 'TL' },
+  { key: 'inProgress', label: 'Subproject Browser', icon: 'SB' },
+  { key: 'quickLinks', label: 'Quick Access Links', icon: 'QL' },
+  { key: 'selectedFolder', label: 'Selected Folder', icon: 'SF' },
+  { key: 'recentFiles', label: 'Recent Files', icon: 'RF' },
+  { key: 'flagged', label: 'Flagged', icon: 'FG' },
+  { key: 'timeline', label: 'Project Timeline', icon: 'TM' },
+  { key: 'timesheet', label: 'Project Timesheet', icon: 'TS' },
+  { key: 'templates', label: 'Templates', icon: 'TP' },
+  { key: 'plainNotes', label: 'Notes', icon: 'NT' },
 ]
 
 function TimelineIcon({ kind }) {
@@ -1128,8 +1128,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
   const [selectedSubfolderPath, setSelectedSubfolderPath] = useState('')
   const [selectedSubfolderName, setSelectedSubfolderName] = useState('')
   const [subprojectBrowserSort, setSubprojectBrowserSort] = useState('type-name')
+  const [showLayoutsPopover, setShowLayoutsPopover] = useState(false)
+  const [newPresetName, setNewPresetName] = useState('')
   const [selectedFolderSort, setSelectedFolderSort] = useState('type-name')
-  const [fileNameColumnWidth, setFileNameColumnWidth] = useState(DEFAULT_FILE_NAME_COLUMN_WIDTH)
+  const [fileNameColumnWidthBySlot, setFileNameColumnWidthBySlot] = useState({})
   const [hiddenExtensions, setHiddenExtensions] = useState([])
   const [openedFilesLog, setOpenedFilesLog] = useState(() => {
     try {
@@ -1304,7 +1306,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
     leftSectionOrder: LEFT_PANEL_SECTION_KEYS,
     rightSectionHeights: { template: 320, permanentLinks: 190, filing: 280, gemini: 380, calendar: CALENDAR_PANEL_MIN_HEIGHT },
     rightSectionOrder: RIGHT_PANEL_SECTION_KEYS,
-    fileNameColumnWidth: DEFAULT_FILE_NAME_COLUMN_WIDTH,
+    fileNameColumnWidthBySlot: {},
   }
 
   function normalizeLayout(value) {
@@ -1334,7 +1336,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       leftSectionOrder: leftOrder.length === LEFT_PANEL_SECTION_KEYS.length ? leftOrder : DEFAULT_LAYOUT.leftSectionOrder,
       rightSectionHeights: rightHeights,
       rightSectionOrder: rightOrder.length === RIGHT_PANEL_SECTION_KEYS.length ? rightOrder : DEFAULT_LAYOUT.rightSectionOrder,
-      fileNameColumnWidth: Math.max(110, Math.min(520, Number(source.fileNameColumnWidth ?? DEFAULT_LAYOUT.fileNameColumnWidth))),
+      fileNameColumnWidthBySlot: (typeof source.fileNameColumnWidthBySlot === 'object' && source.fileNameColumnWidthBySlot !== null) ? source.fileNameColumnWidthBySlot : {},
     }
   }
 
@@ -1370,7 +1372,57 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
     setLeftSectionOrder(Array.isArray(next.leftSectionOrder) && next.leftSectionOrder.length ? [...next.leftSectionOrder] : LEFT_PANEL_SECTION_KEYS)
     setRightSectionHeights({ ...next.rightSectionHeights })
     setRightSectionOrder(Array.isArray(next.rightSectionOrder) && next.rightSectionOrder.length ? [...next.rightSectionOrder] : RIGHT_PANEL_SECTION_KEYS)
-    setFileNameColumnWidth(next.fileNameColumnWidth)
+    setFileNameColumnWidthBySlot(next.fileNameColumnWidthBySlot ?? {})
+  }
+
+  function loadLayoutPresets() {
+    try {
+      return JSON.parse(localStorage.getItem('docketos:layout-presets') ?? '[]')
+    } catch {
+      return []
+    }
+  }
+
+  function saveLayoutPreset(name) {
+    const presets = loadLayoutPresets()
+    const preset = {
+      id: String(Date.now()),
+      name,
+      centerPanelSlots: [...centerPanelSlots],
+      centerGridColumnWeights: [...centerGridColumnWeights],
+      centerGridRowWeights: [...centerGridRowWeights],
+      centerGridColumnRowWeights: { ...centerGridColumnRowWeights },
+      centerKanbanHeight,
+      fileNameColumnWidthBySlot: { ...fileNameColumnWidthBySlot },
+      savedAt: new Date().toISOString(),
+    }
+    localStorage.setItem('docketos:layout-presets', JSON.stringify([...presets, preset]))
+  }
+
+  function deleteLayoutPreset(id) {
+    const presets = loadLayoutPresets().filter(p => p.id !== id)
+    localStorage.setItem('docketos:layout-presets', JSON.stringify(presets))
+  }
+
+  function applyLayoutPreset(preset) {
+    if (Array.isArray(preset.centerPanelSlots) && preset.centerPanelSlots.length) {
+      setCenterPanelSlots([...preset.centerPanelSlots])
+    }
+    if (Array.isArray(preset.centerGridColumnWeights)) {
+      setCenterGridColumnWeights([...preset.centerGridColumnWeights])
+    }
+    if (Array.isArray(preset.centerGridRowWeights)) {
+      setCenterGridRowWeights([...preset.centerGridRowWeights])
+    }
+    if (preset.centerGridColumnRowWeights && typeof preset.centerGridColumnRowWeights === 'object') {
+      setCenterGridColumnRowWeights({ ...preset.centerGridColumnRowWeights })
+    }
+    if (typeof preset.centerKanbanHeight === 'number') {
+      setCenterKanbanHeight(preset.centerKanbanHeight)
+    }
+    if (preset.fileNameColumnWidthBySlot && typeof preset.fileNameColumnWidthBySlot === 'object') {
+      setFileNameColumnWidthBySlot({ ...preset.fileNameColumnWidthBySlot })
+    }
   }
 
   function resetViewerLayout() {
@@ -1402,9 +1454,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       leftSectionOrder,
       rightSectionHeights,
       rightSectionOrder,
-      fileNameColumnWidth,
+      fileNameColumnWidthBySlot,
     })
-  }, [activeProject?.id, leftWidth, rightWidth, leftCollapsed, rightCollapsed, centerTopCollapsed, centerCanvasCollapsed, centerKanbanHeight, centerPanelSlots, centerGridColumnWeights, centerGridRowWeights, centerGridColumnRowWeights, leftSectionHeights, leftSectionOrder, rightSectionHeights, rightSectionOrder, fileNameColumnWidth])
+  }, [activeProject?.id, leftWidth, rightWidth, leftCollapsed, rightCollapsed, centerTopCollapsed, centerCanvasCollapsed, centerKanbanHeight, centerPanelSlots, centerGridColumnWeights, centerGridRowWeights, centerGridColumnRowWeights, leftSectionHeights, leftSectionOrder, rightSectionHeights, rightSectionOrder, fileNameColumnWidthBySlot])
 
   useEffect(() => {
     window.api.projectsList().then(async list => {
@@ -2022,9 +2074,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       }
 
       if (dragState.current.type === 'file-name-column') {
-        const { startX, startWidth } = dragState.current
+        const { slotKey, startX, startWidth } = dragState.current
         const nextWidth = Math.max(110, Math.min(520, startWidth + event.clientX - startX))
-        setFileNameColumnWidth(nextWidth)
+        setFileNameColumnWidthBySlot(prev => ({ ...prev, [slotKey]: nextWidth }))
       }
 
       if (dragState.current.type === 'left-panel-vertical') {
@@ -2128,26 +2180,31 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
     document.body.style.userSelect = 'none'
   }
 
-  function beginFileNameColumnResize(event) {
+  function getSlotFileNameWidth(slotKey) {
+    return fileNameColumnWidthBySlot[slotKey] ?? DEFAULT_FILE_NAME_COLUMN_WIDTH
+  }
+
+  function beginFileNameColumnResize(event, slotKey) {
     event.preventDefault()
     event.stopPropagation()
     dragState.current = {
       type: 'file-name-column',
+      slotKey,
       startX: event.clientX,
-      startWidth: fileNameColumnWidth,
+      startWidth: getSlotFileNameWidth(slotKey),
     }
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
   }
 
-  function getFileNameColumnTextStyle(extra = {}) {
-    const overlap = Math.max(0, fileNameColumnWidth - DEFAULT_FILE_NAME_COLUMN_WIDTH)
+  function getFileNameColumnTextStyle(extra = {}, width = DEFAULT_FILE_NAME_COLUMN_WIDTH) {
+    const overlap = Math.max(0, width - DEFAULT_FILE_NAME_COLUMN_WIDTH)
     const maskBackground = extra.backgroundColor ?? S.panel.backgroundColor
     return {
       minWidth: 0,
-      width: `${fileNameColumnWidth}px`,
-      flex: `0 0 ${fileNameColumnWidth}px`,
-      maxWidth: `${fileNameColumnWidth}px`,
+      width: `${width}px`,
+      flex: `0 0 ${width}px`,
+      maxWidth: `${width}px`,
       marginRight: overlap ? `-${overlap}px` : 0,
       position: 'relative',
       zIndex: 2,
@@ -2157,16 +2214,17 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
     }
   }
 
-  function FileNameColumnHandle() {
+  function FileNameColumnHandle({ slotKey }) {
+    const width = getSlotFileNameWidth(slotKey)
     return (
       <span
         role="separator"
         aria-orientation="vertical"
         title="Drag to resize filename column"
-        onMouseDown={beginFileNameColumnResize}
+        onMouseDown={event => beginFileNameColumnResize(event, slotKey)}
         onClick={event => { event.preventDefault(); event.stopPropagation() }}
         className="shrink-0 cursor-col-resize rounded opacity-0 transition-colors group-hover:opacity-100 hover:bg-[#7A5CFF]/60"
-        style={{ width: 6, height: 18, backgroundColor: 'rgba(122, 92, 255, 0.16)', transform: `translateX(${Math.max(0, fileNameColumnWidth - DEFAULT_FILE_NAME_COLUMN_WIDTH)}px)`, zIndex: 3 }}
+        style={{ width: 6, height: 18, backgroundColor: 'rgba(122, 92, 255, 0.16)', transform: `translateX(${Math.max(0, width - DEFAULT_FILE_NAME_COLUMN_WIDTH)}px)`, zIndex: 3 }}
       />
     )
   }
@@ -3445,7 +3503,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
           />
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex items-center gap-2">
-              <p className="text-xs font-semibold leading-snug truncate" style={{ color: '#F5F5F7' }}>{item.title}</p>
+              <p className="text-xs font-semibold leading-snug break-all" style={{ color: '#F5F5F7' }}>{item.title}</p>
               <span className="mono text-[10px] tabular-nums shrink-0" style={{ color: S.zinc }}>{formatTimelineClock(item.ts)}</span>
             </div>
             <span
@@ -4263,17 +4321,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
     const columnEnd = getTrackRatio(columnWeights, columnIndex, 1)
     const rowStart = getTrackRatio(rowWeights, rowIndex)
     const rowEnd = getTrackRatio(rowWeights, rowIndex, rowSpan)
-    const leftInset = 0
-    const rightInset = 0
-    const topInset = 0
-    const bottomInset = 0
-
     return {
       position: 'absolute',
-      left: `calc(8px + (100% - 16px) * ${columnStart} + ${leftInset}px)`,
-      right: `calc(8px + (100% - 16px) * ${1 - columnEnd} + ${rightInset}px)`,
-      top: `calc((100% - 8px) * ${rowStart} + ${topInset}px)`,
-      bottom: `calc(8px + (100% - 8px) * ${1 - rowEnd} + ${bottomInset}px)`,
+      left: `${columnStart * 100}%`,
+      right: `${(1 - columnEnd) * 100}%`,
+      top: `${rowStart * 100}%`,
+      bottom: `${(1 - rowEnd) * 100}%`,
     }
   }
 
@@ -4641,7 +4694,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
         <div key={entry.fullPath ?? `${entry.name}-${depth}`}>
           <div
             draggable
-            className="group flex items-center gap-2 py-1.5 px-2 rounded border"
+            className="group flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden py-1.5 px-2 rounded border"
             data-drop-path={isDir ? entry.fullPath : undefined}
             onDragEnd={handleFileMoveDragEnd}
             style={{
@@ -4684,9 +4737,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             ) : (
               <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>.</span>
             )}
-            <span style={{ fontSize: '12px' }}>{isDir ? '[DIR]' : getFileIcon(entry.name)}</span>
-            <p className="text-xs truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{entry.name}</p>
-            <FileNameColumnHandle />
+            <span className="shrink-0" style={{ fontSize: '12px' }}>{isDir ? 'DIR' : getFileIcon(entry.name)}</span>
+            <p className="min-w-0 flex-1 text-xs truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(String(slotIndex)))}>{entry.name}</p>
           </div>
           {isDir && isOpen && (
             <div className="mt-1 space-y-1">
@@ -4748,14 +4800,14 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
   function getFileIcon(name) {
     const ext = (name || '').split('.').pop().toLowerCase()
-    if (ext === 'pdf') return '[PDF]'
-    if (ext === 'dwg' || ext === 'dxf') return '[CAD]'
-    if (ext === 'xlsx' || ext === 'xls' || ext === 'xlsm' || ext === 'xlsb' || ext === 'csv') return '[XLS]'
-    if (ext === 'docx' || ext === 'doc' || ext === 'docm' || ext === 'odt' || ext === 'rtf') return '[DOC]'
-    return '[FILE]'
+    if (ext === 'pdf') return 'PDF'
+    if (ext === 'dwg' || ext === 'dxf') return 'CAD'
+    if (ext === 'xlsx' || ext === 'xls' || ext === 'xlsm' || ext === 'xlsb' || ext === 'csv') return 'XLS'
+    if (ext === 'docx' || ext === 'doc' || ext === 'docm' || ext === 'odt' || ext === 'rtf') return 'DOC'
+    return 'FILE'
   }
 
-  function renderFolderEntries(entries, depth = 0, parentPath = selectedSubfolderPath) {
+  function renderFolderEntries(entries, depth = 0, parentPath = selectedSubfolderPath, slotKey = 'default') {
     const visible = hiddenExtensions.length
       ? (entries ?? []).filter(e => e.isDirectory || !hiddenExtensions.includes(e.ext || ''))
       : (entries ?? [])
@@ -4820,16 +4872,16 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             ) : (
               <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>.</span>
             )}
-            <span style={{ fontSize: '12px' }}>{isDir ? '[DIR]' : getFileIcon(entry.name)}</span>
-            <span className="text-xs truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{entry.name}</span>
-            <FileNameColumnHandle />
+            <span style={{ fontSize: '12px' }}>{isDir ? 'DIR' : getFileIcon(entry.name)}</span>
+            <span className="text-xs truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(slotKey))}>{entry.name}</span>
+            <FileNameColumnHandle slotKey={slotKey} />
             <span className="min-w-0 flex-1" />
             {!isDir && entry.sizeBytes > 0 && (
-              <span className="mono text-[10px] shrink-0" style={{ color: S.muted }}>{formatFileSize(entry.sizeBytes)}</span>
+              <span className="mono text-[10px] min-w-0 overflow-hidden whitespace-nowrap" style={{ color: S.muted, flexShrink: 2 }}>{formatFileSize(entry.sizeBytes)}</span>
             )}
             <span
-              className="mono text-[10px] shrink-0 max-w-[150px] truncate"
-              style={{ color: S.zinc }}
+              className="mono text-[10px] min-w-0 overflow-hidden whitespace-nowrap"
+              style={{ color: S.zinc, flexShrink: 2 }}
               title={`Last edited: ${formatLastEditedDate(entry.mtime)}`}
             >
               {formatLastEditedDate(entry.mtime)}
@@ -4838,7 +4890,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
           {isDir && isOpen && (
             <div className="mt-1 space-y-1">
-              {renderFolderEntries(children, depth + 1, entry.fullPath)}
+              {renderFolderEntries(children, depth + 1, entry.fullPath, slotKey)}
             </div>
           )}
         </div>
@@ -4887,9 +4939,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               className="flex items-center gap-2 px-3 py-1.5 rounded text-sm border hover:border-[#3A3A40] transition"
               style={S.elevated}
             >
-              <span className="mono text-xs" style={{ color: S.accent }}>[O]</span>
+              <span className="mono text-xs" style={{ color: S.accent }}>O</span>
               <span className="max-w-[200px] truncate">{activeProject?.name ?? 'Select Project'}</span>
-              <span className="mono text-xs" style={{ color: S.muted }}>?</span>
+              <span className="mono text-xs" style={{ color: S.muted }}>v</span>
             </button>
             {showDropdown && (
               <div className="absolute top-full left-0 mt-1 w-64 border rounded shadow-2xl z-50" style={S.panel}>
@@ -4937,6 +4989,16 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
         </div>
 
         <div className="flex items-center gap-2">
+          {!isBoxPopout && shouldLoadCenterBoxes && (
+            <button
+              onClick={addCenterPanelBox}
+              className="mono text-[10px] px-2.5 py-1.5 rounded border hover:border-[#7A5CFF] hover:text-white transition"
+              style={{ ...S.elevated, color: S.zinc }}
+              title="Add another dashboard box"
+            >
+              + Add Box
+            </button>
+          )}
           <div className="flex items-center gap-2 border rounded px-2.5 py-1" style={S.deeper}>
             <span className={`w-2 h-2 rounded-full ${geminiKeySet ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`} />
             <span className={`mono text-xs ${geminiKeySet ? 'text-emerald-400' : 'text-zinc-500'}`}>
@@ -4992,7 +5054,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         const inferred = inferJobNumberFromRootPath(activeProject?.root_path)
                         if (inferred) updateProjectInfoField('jobNumber', inferred)
                       }}
-                      className="mono shrink-0 rounded border px-1.5 py-0.5 text-[10px] opacity-0 transition group-hover:opacity-100 disabled:opacity-0"
+                      className="mono shrink-0 rounded border px-1.5 py-0.5 text-[10px] transition disabled:opacity-40"
                       style={{ ...S.elevated, color: S.muted }}
                     >
                       Auto
@@ -5059,7 +5121,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             >
               <div style={getDropIndicatorStyle(leftDropTargetKey === 'launchers' && draggingLeftSectionKey !== 'launchers')} />
               <div className="shrink-0 mb-3 flex items-center justify-between gap-2">
-                <h3 className="type-panel-title" style={{ color: S.muted }}>? System Launchers</h3>
+                <h3 className="type-panel-title" style={{ color: S.muted }}>System Launchers</h3>
                 <span
                   draggable
                   onDragStart={event => beginSectionDrag(event, 'launchers', setDraggingLeftSectionKey)}
@@ -5068,7 +5130,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   style={getSectionHandleStyle(draggingLeftSectionKey === 'launchers')}
                   title="Drag to reorder panel sections"
                 >
-                  ??
+                  ::
                 </span>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
@@ -5085,7 +5147,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       style={S.elevated}
                     >
                       <div className="text-xs font-medium text-white group-hover:text-[#7A5CFF] transition">{label}</div>
-                      <div className="mono mt-0.5 truncate" style={{ fontSize: '10px', color: S.zinc }}>{getPathName(path) || 'No path'}</div>
+                      <div className="mono mt-0.5 break-all" style={{ fontSize: '10px', color: S.zinc }}>{getPathName(path) || 'No path'}</div>
                     </button>
                   ))}
                 </div>
@@ -5105,7 +5167,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             >
               <div style={getDropIndicatorStyle(leftDropTargetKey === 'folders' && draggingLeftSectionKey !== 'folders')} />
               <div className="shrink-0 flex items-center justify-between mb-2">
-                <h3 className="type-panel-title" style={{ color: S.muted }}>[DIR] Project Folders</h3>
+                <h3 className="type-panel-title" style={{ color: S.muted }}>Project Folders</h3>
                 <div className="flex items-center gap-2">
                   {activeProject && (
                     <button
@@ -5173,10 +5235,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       >
                         <div className="flex min-w-0 items-center gap-2">
                           <FileFlagDot flag={getFileFlag(result.fullPath)} />
-                          <p className="truncate text-xs font-medium" style={getFileNameColumnTextStyle({ color: S.text })}>{result.name}</p>
-                          <FileNameColumnHandle />
+                          <p className="truncate text-xs font-medium" style={getFileNameColumnTextStyle({ color: S.text }, getSlotFileNameWidth(String(slotIndex)))}>{result.name}</p>
+                          <FileNameColumnHandle slotKey={String(slotIndex)} />
                         </div>
-                        <p className="mono mt-0.5 truncate text-[10px]" style={{ color: S.zinc }}>{result.relativePath}</p>
+                        <p className="mono mt-0.5 break-all text-[10px]" style={{ color: S.zinc }}>{result.relativePath}</p>
                       </button>
                     ))}
                   </div>
@@ -5188,8 +5250,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     onAddQuickLink={handleAddQuickLink}
                     onQuickFile={handleSendEntryToQuickFiling}
                     revealPath={fileRevealPath}
-                    nameColumnWidth={fileNameColumnWidth}
-                    onBeginNameColumnResize={beginFileNameColumnResize}
+                    nameColumnWidth={getSlotFileNameWidth('left-panel')}
+                    onBeginNameColumnResize={event => beginFileNameColumnResize(event, 'left-panel')}
                       flagOptions={FILE_FLAG_OPTIONS}
                       getFileFlag={getFileFlag}
                       onSetFileFlag={setFileFlag}
@@ -5209,7 +5271,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             >
               <div style={getDropIndicatorStyle(leftDropTargetKey === 'active' && draggingLeftSectionKey !== 'active')} />
               <div className="shrink-0 flex items-center justify-between gap-2 mb-2">
-                <h3 className="type-panel-title" style={{ color: S.muted }}>?? Active Subproject</h3>
+                <h3 className="type-panel-title" style={{ color: S.muted }}>Active Subproject</h3>
                 <div className="flex items-center gap-2">
                   {activeProject && (
                     <button
@@ -5237,7 +5299,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     style={getSectionHandleStyle(draggingLeftSectionKey === 'active')}
                     title="Drag to reorder panel sections"
                   >
-                    ??
+                    ::
                   </span>
                 </div>
               </div>
@@ -5252,7 +5314,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     }
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm truncate">Project overview</span>
+                      <span className="min-w-0 flex items-center gap-2">
+                        <span className="text-sm break-words">Project overview</span>
+                      </span>
                       <span className="mono text-[10px]" style={{ color: projectOverviewSelected ? S.accent : S.zinc }}>
                         {projectOverviewSelected ? 'Active' : 'Use'}
                       </span>
@@ -5260,8 +5324,6 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     <p className="mono mt-1 truncate" style={{ fontSize: '10px', color: S.zinc }}>{activeProject.root_path}</p>
                   </button>
                 )}
-                <p className="mono mt-2 text-xs" style={{ color: S.dim }}>Select a stage folder under the Technical folder.</p>
-
                 <div className="mt-3 flex-1 min-h-0 border-t pt-3" style={{ borderColor: S.border }}>
                   <p className="mono mb-2" style={{ fontSize: '10px', color: S.muted }}>Subprojects in this project</p>
                   <div className="space-y-1 h-full min-h-0 overflow-y-auto pr-1">
@@ -5271,9 +5333,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         {subprojectDiscovery && (
                           <div className="mono rounded border p-2" style={{ backgroundColor: '#000000', borderColor: S.border, color: S.zinc, fontSize: '10px' }}>
                             <p>Status: {subprojectDiscovery.status}</p>
-                            {subprojectDiscovery.rootPath && <p className="truncate" title={subprojectDiscovery.rootPath}>Root: {subprojectDiscovery.rootPath}</p>}
+                            {subprojectDiscovery.rootPath && <p className="break-words" title={subprojectDiscovery.rootPath}>Root: {subprojectDiscovery.rootPath}</p>}
                             {subprojectDiscovery.technicalPath
-                              ? <p className="truncate" title={subprojectDiscovery.technicalPath}>Technical: {subprojectDiscovery.technicalPath}</p>
+                              ? <p className="break-words" title={subprojectDiscovery.technicalPath}>Technical: {subprojectDiscovery.technicalPath}</p>
                               : <p>Technical: not found</p>}
                             {Number.isFinite(subprojectDiscovery.count) && <p>Folders found: {subprojectDiscovery.count}</p>}
                           </div>
@@ -5293,7 +5355,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           }
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm truncate">{subproject.display_name}</span>
+                            <span className="min-w-0 flex items-center gap-2">
+                              <span className="text-sm break-words">{subproject.display_name}</span>
+                            </span>
                             <span className="mono text-[10px]" style={{ color: isCurrent ? S.accent : S.zinc }}>
                               {isCurrent ? 'Active' : 'Use'}
                             </span>
@@ -5346,34 +5410,27 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               event.stopPropagation()
               toggleLeftPanel()
             }}
-            className="mono w-full h-16 text-sm leading-none flex items-center justify-center"
+            className="mono w-full h-16 text-base font-semibold leading-none flex items-center justify-center"
             style={{ color: S.zinc }}
             title={leftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
           >
-            {leftCollapsed ? '>' : '<'}
+            {leftCollapsed ? '▶' : '◀'}
           </button>}
         </div>
 
         {/* CENTER PANEL */}
-        <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: '#000000' }}>
+        <main
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{ backgroundColor: '#000000' }}
+        >
 
           {/* Kanban */}
           {(isBoxPopout || !centerTopCollapsed) && (
-            <div className={isBoxPopout || centerCanvasCollapsed ? 'flex-1 min-h-0 flex flex-col' : 'shrink-0 flex flex-col'} style={{ height: isBoxPopout || centerCanvasCollapsed ? undefined : `${centerKanbanHeight}px`, borderColor: S.border }}>
-            {!isBoxPopout && shouldLoadCenterBoxes && <div className="flex items-center justify-end px-2 pt-2 pb-1">
-              <button
-                onClick={addCenterPanelBox}
-                className="mono text-[10px] px-2.5 py-1 rounded border hover:border-[#7A5CFF] hover:text-white transition"
-                style={{ backgroundColor: '#0D0D0F', borderColor: S.border, color: S.zinc }}
-                title="Add another dashboard box"
-              >
-                + Add Box
-              </button>
-            </div>}
+            <div className={isBoxPopout || centerCanvasCollapsed ? 'flex-1 min-h-0 flex flex-col' : 'min-h-0 flex flex-col overflow-hidden'} style={{ height: isBoxPopout || centerCanvasCollapsed ? undefined : `${centerKanbanHeight}px`, borderColor: S.border }}>
             <div
               ref={centerGridRef}
-              className="relative flex-1 min-h-0 overflow-hidden rounded border"
-              style={{ minHeight: isBoxPopout ? '100%' : shouldLoadCenterBoxes ? getCenterPanelCompactHeight(centerPanelRenderCount) : 220, borderColor: S.border }}
+              className="relative flex-1 min-h-0 overflow-hidden"
+              style={{ minHeight: isBoxPopout ? '100%' : shouldLoadCenterBoxes ? getCenterPanelCompactHeight(centerPanelRenderCount) : 220 }}
             >
               {!shouldLoadCenterBoxes ? (
                 <div className="absolute inset-2 grid place-items-center rounded border" style={{ ...S.deeper, borderColor: S.border }}>
@@ -5442,18 +5499,15 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 const isLastColumn = columnIndex === columnCount - 1
                 const isLastRow    = rowIndex + rowSpan >= rowCount
                 const boxDividerStyle = isBoxPopout ? {} : {
-                  borderRight:  isLastColumn ? 'none' : `1px solid ${S.border}`,
-                  borderBottom: isLastRow    ? 'none' : `1px solid ${S.border}`,
-                  borderLeft:   'none',
-                  borderTop:    'none',
+                  border: `1px solid ${S.border}`,
                 }
                 return (
                 <div
                   key={`center-panel-${isBoxPopout ? 'popout' : slotIndex}`}
                   className="min-w-0 min-h-[150px] flex flex-col transition-colors duration-150"
                   style={!isBoxPopout && draggingCenterPanelIndex === renderIndex
-                    ? { backgroundColor: S.deeper.backgroundColor, ...boxPositionStyle, ...boxDividerStyle, opacity: 0.58, outline: `1px solid ${S.accent}`, transform: 'scale(0.985)' }
-                    : { backgroundColor: S.deeper.backgroundColor, ...boxPositionStyle, ...boxDividerStyle }
+                    ? { ...boxPositionStyle, ...boxDividerStyle, opacity: 0.58, outline: `1px solid ${S.accent}`, transform: 'scale(0.985)' }
+                    : { ...boxPositionStyle, ...boxDividerStyle }
                   }
                   onDragOver={event => {
                     if (isBoxPopout || draggingCenterPanelIndex === null) return
@@ -5466,7 +5520,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     setDraggingCenterPanelIndex(null)
                   }}
                 >
-                  {!isBoxPopout && <div className="px-2.5 py-2 border-b flex items-center gap-2" style={{ borderColor: '#2A2A30' }}>
+                  {!isBoxPopout && <div className="px-2.5 py-2 border-b flex items-center flex-wrap gap-2" style={{ borderColor: '#2A2A30', backgroundColor: '#111113' }}>
                     <span
                       draggable={!isBoxPopout}
                       onDragStart={event => {
@@ -5483,7 +5537,6 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     >
                       {isBoxPopout ? '[]' : '::'}
                     </span>
-                    <span className="shrink-0" style={{ fontSize: '13px' }}>{panelOption.icon}</span>
                     <select
                       value={key}
                       onChange={event => updateCenterPanelBox(slotIndex, event.target.value)}
@@ -5504,7 +5557,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         style={{ color: S.dim }}
                         title={`Open ${panelOption.label} in a separate window`}
                       >
-                        Pop Out
+                          <span className="block text-xl leading-none font-bold -mt-0.5">↗</span>
                       </button>
                     )}
                     {!isBoxPopout && centerPanelSlots.length > 1 && (
@@ -5514,11 +5567,11 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         style={{ color: S.dim }}
                         title={`Remove box ${slotIndex + 1}`}
                       >
-                        Remove
+                        ✕
                       </button>
                     )}
                   </div>}
-                  <div className="p-2 space-y-2 flex-1 overflow-y-auto">
+                  <div className="p-3 space-y-2 flex-1 overflow-y-auto">
                     {key === 'inProgress' && projectOverviewSelected && (
                       <div className="min-h-[120px] grid place-items-center rounded border p-4" style={S.panel}>
                         <div className="max-w-sm text-center">
@@ -5573,7 +5626,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                     parentPath: getParentPath(selectedSubfolderPath),
                                   })
                                 }}
-                                className="group flex items-center gap-2 rounded border px-2 py-1.5"
+                                className="group flex min-w-0 items-center gap-2 overflow-hidden rounded border px-2 py-1.5"
                                 style={{
                                   ...S.panel,
                                   borderColor: fileMoveDropTargetPath === selectedSubfolderPath ? '#7A5CFF' : S.border,
@@ -5582,13 +5635,13 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                 }}
                                 title={selectedSubfolderPath}
                               >
-                                <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>?</span>
+                                <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>.</span>
                                 <FileFlagDot flag={getFileFlag(selectedSubfolderPath)} />
-                                <span style={{ fontSize: '12px' }}>??</span>
-                                <p className="text-xs font-medium truncate" style={{ color: '#E4E4E7' }}>{getPathName(selectedSubfolderPath)}</p>
-                                <span className="mono ml-auto text-[10px] shrink-0" style={{ color: S.zinc }}>Move Here</span>
+                                <span className="shrink-0" style={{ fontSize: '12px' }}>DIR</span>
+                                <p className="min-w-0 flex-1 text-xs font-medium truncate" style={{ color: '#E4E4E7' }}>{getPathName(selectedSubfolderPath)}</p>
+                                <span className="mono shrink-0 text-[10px]" style={{ color: S.zinc }}>Move Here</span>
                               </div>
-                              {renderFolderEntries(sortEntries(folderChildrenByPath[selectedSubfolderPath] ?? [], subprojectBrowserSort))}
+                              {renderFolderEntries(sortEntries(folderChildrenByPath[selectedSubfolderPath] ?? [], subprojectBrowserSort), 0, selectedSubfolderPath, String(slotIndex))}
                             </>
                           )}
                         </div>
@@ -5597,7 +5650,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
                     {key === 'todo' && (
                       <div className="mb-2 space-y-2">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <select
                             value={selectedTodoListId}
                             onChange={event => selectTodoList(slotIndex, event.target.value)}
@@ -5675,11 +5728,6 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
                     {key === 'quickLinks' && (
                       <div className="space-y-2">
-                        <p className="mono p-1" style={{ fontSize: '10px', color: S.dim }}>
-                          {activeSubproject
-                            ? 'Quick links are scoped to the active subproject.'
-                            : 'No active subproject selected - using project quick links.'}
-                        </p>
                         {quickLinks.map(link => (
                           <div
                             key={link.path}
@@ -5715,26 +5763,13 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             }
                             title="Drag to reorder"
                           >
-                            <div className="group flex items-center gap-2">
-                              <span className="mono" style={{ fontSize: '11px', color: S.zinc }}>::</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="mono shrink-0" style={{ fontSize: '11px', color: S.zinc }}>::</span>
                               <FileFlagDot flag={getFileFlag(link.path)} />
-                              {link.isDirectory ? (
-                                <button
-                                  onClick={() => toggleQuickLinkFolder(link.path)}
-                                  className="mono text-xs"
-                                  style={{ color: S.zinc, width: '14px' }}
-                                  title={expandedQuickLinkFolders[link.path] ? 'Collapse' : 'Expand'}
-                                >
-                                  {loadingQuickLinkFolders[link.path] ? '...' : expandedQuickLinkFolders[link.path] ? '-' : '+'}
-                                </button>
-                              ) : (
-                                <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>.</span>
-                              )}
-                              <span style={{ fontSize: '12px' }}>{link.isDirectory ? '[DIR]' : getFileIcon(link.name)}</span>
-                              <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{link.name}</p>
-                              <FileNameColumnHandle />
+                              <span style={{ fontSize: '11px' }}>{link.isDirectory ? 'DIR' : getFileIcon(link.name)}</span>
+                              <p className="text-xs font-medium truncate min-w-0" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(String(slotIndex)))}>{link.name}</p>
                               <span className="min-w-0 flex-1" />
-                              {!link.isDirectory && quickLinkStats[link.path]?.sizeBytes > 0 && (
+                              {quickLinkStats[link.path]?.sizeBytes > 0 && (
                                 <span className="mono text-[10px] shrink-0" style={{ color: S.muted }}>{formatFileSize(quickLinkStats[link.path].sizeBytes)}</span>
                               )}
                               {quickLinkStats[link.path]?.mtime && (
@@ -5753,7 +5788,6 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                 Remove
                               </button>
                             </div>
-                            <p className="mono mt-1 truncate" style={{ fontSize: '10px', color: S.zinc }}>{link.path}</p>
                             {link.isDirectory && expandedQuickLinkFolders[link.path] && (
                               <div className="mt-2 space-y-1">
                                 {renderQuickLinkChildren(quickLinkChildrenByPath[link.path] ?? [], 1)}
@@ -5810,9 +5844,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           >
                             <div className="group flex items-center gap-2">
                               <FileFlagDot flag={getFileFlag(selectedTreeFolderPath)} />
-                              <span style={{ fontSize: '12px' }}>??</span>
-                              <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{getPathName(selectedTreeFolderPath)}</p>
-                              <FileNameColumnHandle />
+                              <span style={{ fontSize: '12px' }}>DIR</span>
+                              <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(String(slotIndex)))}>{getPathName(selectedTreeFolderPath)}</p>
                             </div>
                             <p className="mono mt-1 truncate" style={{ fontSize: '10px', color: S.zinc }}>{selectedTreeFolderPath}</p>
                           </div>
@@ -5850,14 +5883,14 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                       }}
                                       title={selectedTreeFolderParentPath}
                                     >
-                                      <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>?</span>
+                                      <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>.</span>
                                       <FileFlagDot flag={getFileFlag(selectedTreeFolderParentPath)} />
-                                      <span style={{ fontSize: '12px' }}>??</span>
+                                      <span style={{ fontSize: '12px' }}>DIR</span>
                                       <p className="text-xs font-medium truncate" style={{ color: '#E4E4E7' }}>{getPathName(selectedTreeFolderParentPath)}</p>
                                       <span className="mono ml-auto text-[10px] shrink-0" style={{ color: S.zinc }}>Parent</span>
                                     </div>
                                   )}
-                                  {renderFolderEntries(sortEntries(selectedTreeFolderEntries, selectedFolderSort), 0, selectedTreeFolderPath)}
+                                  {renderFolderEntries(sortEntries(selectedTreeFolderEntries, selectedFolderSort), 0, selectedTreeFolderPath, String(slotIndex))}
                                 </>
                               )}
                           </div>
@@ -5903,8 +5936,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <FileFlagDot flag={getFileFlag(entry.path)} />
                                 <span style={{ fontSize: '11px' }}>{getFileIcon(entry.name)}</span>
-                                <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{entry.name}</p>
-                                <FileNameColumnHandle />
+                                <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(String(slotIndex)))}>{entry.name}</p>
                               </div>
                               <span className="min-w-0 flex-1" />
                               <span className="mono text-[10px] shrink-0" style={{ color: S.zinc }}>{formatRelativeTime(entry.openedAt)}</span>
@@ -5984,9 +6016,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               >
                                 <div className="flex items-center gap-2">
                                   <FileFlagDot flag={item} />
-                                  <span style={{ fontSize: '12px' }}>{item.isDirectory ? '[DIR]' : getFileIcon(item.name)}</span>
-                                  <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{item.name}</p>
-                                  <FileNameColumnHandle />
+                                  <span style={{ fontSize: '12px' }}>{item.isDirectory ? 'DIR' : getFileIcon(item.name)}</span>
+                                  <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(String(slotIndex)))}>{item.name}</p>
+                                  <FileNameColumnHandle slotKey={String(slotIndex)} />
                                 </div>
                                 <p className="mono mt-1 truncate" style={{ fontSize: '10px', color: S.zinc }}>{item.path}</p>
                               </button>
@@ -6011,11 +6043,11 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             >
                               <div className="flex items-center gap-2">
                                 <FileFlagDot flag={item} />
-                                <span style={{ fontSize: '12px' }}>{item.isDirectory ? '[DIR]' : getFileIcon(item.name)}</span>
-                                <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{item.name}</p>
-                                <FileNameColumnHandle />
+                                <span style={{ fontSize: '12px' }}>{item.isDirectory ? 'DIR' : getFileIcon(item.name)}</span>
+                                <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(String(slotIndex)))}>{item.name}</p>
+                                <FileNameColumnHandle slotKey={String(slotIndex)} />
                               </div>
-                              <p className="mono mt-1 truncate" style={{ fontSize: '10px', color: S.zinc }}>{item.path}</p>
+                              <p className="mono mt-1 break-all" style={{ fontSize: '10px', color: S.zinc }}>{item.path}</p>
                             </button>
                           )))}
                           {flaggedTotal === 0 && (
@@ -6101,7 +6133,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             Clear List
                           </button>
                         </div>
-                        <div className="rounded-md border" style={{ ...S.panel, padding: '10px 8px' }}>
+                        <div className="space-y-2">
                             {groupTimelineByDay(timelineItems).map((group, gIdx, allGroups) => (
                               <div key={group.label} className={gIdx > 0 ? 'mt-4' : ''}>
                                 <div className="flex items-center gap-2 px-1 mb-2">
@@ -6166,7 +6198,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                               className="w-full text-left"
                                             >
                                               <div className="flex items-start justify-between gap-2">
-                                                <p className="text-xs font-semibold leading-snug truncate" style={{ color: '#F5F5F7' }}>{node.title}</p>
+                                                <p className="text-xs font-semibold leading-snug break-all" style={{ color: '#F5F5F7' }}>{node.title}</p>
                                                 <span
                                                   className="mono text-[10px] tabular-nums shrink-0 rounded px-1.5 py-0.5"
                                                   style={{ color: S.muted, backgroundColor: '#0D0D0F', border: '1px solid #34343A' }}
@@ -6214,14 +6246,14 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
                     {key === 'timesheet' && (
                       <div className="space-y-2">
-                        <div className="grid grid-cols-[116px_1fr_72px_minmax(140px,0.75fr)_auto] gap-2 items-end border-b pb-2" style={{ borderColor: S.border }}>
+                        <div className="flex flex-wrap items-start gap-2">
                           <input
                             type="date"
                             value={timesheetDraft.date}
                             onChange={event => updateTimesheetDraft('date', event.target.value)}
                             disabled={!activeProject}
-                            className="min-w-0 bg-transparent text-xs outline-none disabled:opacity-40"
-                            style={{ borderBottom: `1px solid ${S.border}`, color: S.text, padding: '4px 2px 5px' }}
+                            className="w-[125px] shrink-0 rounded border text-xs outline-none disabled:opacity-40"
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                           />
                           <input
                             value={timesheetDraft.task}
@@ -6229,8 +6261,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             onKeyDown={event => event.key === 'Enter' && addTimesheetEntry()}
                             placeholder="Task / activity"
                             disabled={!activeProject}
-                            className="min-w-0 bg-transparent text-xs outline-none disabled:opacity-40"
-                            style={{ borderBottom: `1px solid ${S.border}`, color: S.text, padding: '4px 2px 5px' }}
+                            className="min-w-[160px] flex-[1_1_180px] rounded border text-xs outline-none disabled:opacity-40"
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                           />
                           <input
                             type="number"
@@ -6241,8 +6273,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             onKeyDown={event => event.key === 'Enter' && addTimesheetEntry()}
                             placeholder="Hours"
                             disabled={!activeProject}
-                            className="min-w-0 bg-transparent text-xs outline-none disabled:opacity-40"
-                            style={{ borderBottom: `1px solid ${S.border}`, color: S.text, padding: '4px 2px 5px' }}
+                            className="w-[78px] shrink-0 rounded border text-xs outline-none disabled:opacity-40"
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                           />
                           <textarea
                             value={timesheetDraft.note}
@@ -6250,16 +6282,16 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             placeholder="Optional note"
                             disabled={!activeProject}
                             rows={getTimesheetNoteRows(timesheetDraft.note)}
-                            className="min-w-0 resize-none bg-transparent text-xs outline-none disabled:opacity-40"
-                            style={{ borderBottom: `1px solid ${S.border}`, color: S.text, padding: '4px 2px 5px', lineHeight: '16px' }}
+                            className="min-w-[150px] flex-[1_1_150px] resize-none rounded border text-xs outline-none disabled:opacity-40"
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px', lineHeight: '16px', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                           />
                           <div className="flex gap-1">
                             <button
                               type="button"
                               onClick={addTimesheetEntry}
                               disabled={!activeProject || !String(timesheetDraft.task ?? '').trim() || !(Number(timesheetDraft.hours) > 0)}
-                              className="type-command px-2 py-1 rounded border transition disabled:opacity-40"
-                              style={{ backgroundColor: 'transparent', borderColor: S.border, color: S.text }}
+                              className="text-xs px-2 rounded border transition disabled:opacity-40"
+                              style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text }}
                             >
                               Add
                             </button>
@@ -6267,7 +6299,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               type="button"
                               onClick={startTimesheetTimer}
                               disabled={!activeProject || Boolean(timesheetTimer) || !String(timesheetDraft.task ?? '').trim()}
-                              className="type-command px-2 py-1 rounded border transition disabled:opacity-40"
+                              className="text-xs px-2 rounded border transition disabled:opacity-40"
                               style={{ backgroundColor: S.accent, borderColor: S.accent, color: 'white' }}
                             >
                               Start
@@ -6275,14 +6307,14 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           </div>
                         </div>
                         {timesheetTimer && (
-                          <div className="flex flex-wrap items-center justify-between gap-2 border-l-2 px-2 py-1.5" style={{ borderColor: S.accent, backgroundColor: 'rgba(122, 92, 255, 0.08)' }}>
+                          <div className="flex flex-wrap items-center justify-between gap-2 rounded border px-2 py-2" style={S.panel}>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="type-tiny-label" style={{ color: S.dim }}>Running</span>
-                                <span className="min-w-0 truncate text-sm font-semibold" style={{ color: S.text }}>{timesheetTimer.task}</span>
+                                <span className="min-w-0 whitespace-normal text-sm font-semibold" style={{ color: S.text, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{timesheetTimer.task}</span>
                                 <span className="mono text-xs tabular-nums" style={{ color: S.accent }}>{formatTimesheetElapsed(timesheetTimerElapsedMs)}</span>
                               </div>
-                              <p className="mono mt-1 truncate text-[10px]" style={{ color: S.zinc }}>
+                              <p className="mono mt-1 break-all text-[10px]" style={{ color: S.zinc }}>
                                 Started {formatTimesheetClock(timesheetTimer.startedAt)} | {timesheetTimer.date}
                               </p>
                             </div>
@@ -6290,7 +6322,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               <button
                                 type="button"
                                 onClick={endTimesheetTimer}
-                                className="type-command px-2 py-1 rounded border transition"
+                                className="text-xs px-2 py-1 rounded border transition"
                                 style={{ backgroundColor: S.accent, borderColor: S.accent, color: 'white' }}
                               >
                                 End Time
@@ -6298,47 +6330,47 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               <button
                                 type="button"
                                 onClick={cancelTimesheetTimer}
-                                className="type-command px-2 py-1 rounded border transition"
-                                style={{ backgroundColor: 'transparent', borderColor: S.border, color: S.zinc }}
+                                className="text-xs px-2 py-1 rounded border transition"
+                                style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.zinc }}
                               >
                                 Cancel
                               </button>
                             </div>
                           </div>
                         )}
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-1">
-                          <div className="flex min-w-0 items-center gap-1.5">
+                        <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] gap-2">
+                          <div className="flex min-w-0 items-center gap-2 rounded border px-2 py-1" style={S.panel}>
                             <span className="type-tiny-label" style={{ color: S.dim }}>Entries</span>
                             <span className="text-xs font-semibold tabular-nums" style={{ color: S.text }}>{timesheetEntries.length}</span>
                           </div>
-                          <div className="flex min-w-0 items-center gap-1.5">
+                          <div className="flex min-w-0 items-center gap-2 rounded border px-2 py-1" style={S.panel}>
                             <span className="type-tiny-label" style={{ color: S.dim }}>Hours</span>
                             <span className="text-xs font-semibold tabular-nums" style={{ color: S.text }}>{timesheetTotalHours.toFixed(2)}</span>
                           </div>
-                          <div className="flex min-w-0 items-center gap-1.5">
+                          <div className="flex min-w-0 items-center gap-2 rounded border px-2 py-1" style={S.panel}>
                             <span className="type-tiny-label shrink-0" style={{ color: S.dim }}>Project</span>
-                            <span className="min-w-0 truncate text-xs font-medium" style={{ color: S.text }}>{activeProject?.name ?? 'None'}</span>
+                            <span className="min-w-0 whitespace-normal text-xs font-medium" style={{ color: S.text, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{activeProject?.name ?? 'None'}</span>
                           </div>
                         </div>
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {timesheetGroups.map(group => (
-                            <section key={group.key} className="border-t pt-2" style={{ borderColor: S.border }}>
-                              <div className="flex items-center justify-between gap-2 px-1 pb-1.5">
-                                <span className="type-overline truncate" style={{ color: S.muted }}>{group.label}</span>
-                                <span className="mono text-[10px] shrink-0 tabular-nums" style={{ color: S.accent }}>
+                            <div key={group.key} className="rounded border" style={S.panel}>
+                              <div className="flex items-center justify-between gap-2 border-b px-2 py-1.5" style={{ borderColor: S.border }}>
+                                <span className="type-overline whitespace-normal" style={{ color: S.muted, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{group.label}</span>
+                                <span className="mono text-[10px] rounded px-1.5 py-0.5 shrink-0" style={{ backgroundColor: '#0D0D0F', color: S.accent, border: `1px solid ${S.border}` }}>
                                   {group.totalHours.toFixed(2)}h
                                 </span>
                               </div>
-                              <div className="space-y-1">
+                              <div className="space-y-1 p-2">
                                 {group.entries.map(entry => (
-                                  <div key={entry.id} className="group border-b px-1 py-1.5 last:border-b-0" style={{ borderColor: S.border }}>
-                                    <div className="grid grid-cols-[1fr_72px_minmax(140px,0.75fr)_auto] gap-2 items-start">
+                                  <div key={entry.id} className="rounded border p-2" style={S.deeper}>
+                                    <div className="flex flex-wrap items-start gap-2">
                                       <input
                                         value={entry.task}
                                         onChange={event => updateTimesheetEntry(entry.id, 'task', event.target.value)}
                                         placeholder="Task / activity"
-                                        className="min-w-0 bg-transparent text-xs font-medium outline-none"
-                                        style={{ color: S.text, padding: '4px 2px' }}
+                                        className="min-w-[160px] flex-[1_1_180px] rounded border text-xs outline-none"
+                                        style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                                       />
                                       <input
                                         type="number"
@@ -6347,35 +6379,35 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                         value={entry.hours}
                                         onChange={event => updateTimesheetEntry(entry.id, 'hours', event.target.value)}
                                         placeholder="Hours"
-                                        className="min-w-0 bg-transparent text-xs outline-none tabular-nums"
-                                        style={{ color: S.text, padding: '4px 2px' }}
+                                        className="w-[78px] shrink-0 rounded border text-xs outline-none"
+                                        style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                                       />
                                       <textarea
                                         value={entry.note}
                                         onChange={event => updateTimesheetEntry(entry.id, 'note', event.target.value)}
                                         placeholder="Optional note"
                                         rows={getTimesheetNoteRows(entry.note)}
-                                        className="min-w-0 resize-none bg-transparent text-xs outline-none"
-                                        style={{ color: S.text, padding: '4px 2px', lineHeight: '16px' }}
+                                        className="min-w-[150px] flex-[1_1_150px] resize-none rounded border text-xs outline-none"
+                                        style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px', lineHeight: '16px', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                                       />
                                       <button
                                         type="button"
                                         onClick={() => removeTimesheetEntry(entry.id)}
-                                        className="type-command shrink-0 opacity-50 transition hover:opacity-100 hover:text-white"
-                                        style={{ color: S.zinc }}
+                                        className="mono text-[10px] px-2 rounded border hover:text-white transition shrink-0"
+                                        style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.zinc }}
                                       >
                                         Remove
                                       </button>
                                     </div>
                                     {(entry.startTime || entry.endTime) && (
-                                      <p className="mono mt-0.5 text-[10px]" style={{ color: S.zinc }}>
+                                      <p className="mono mt-1 text-[10px]" style={{ color: S.zinc }}>
                                         {formatTimesheetClock(entry.startTime)} - {formatTimesheetClock(entry.endTime)}
                                       </p>
                                     )}
                                   </div>
                                 ))}
                               </div>
-                            </section>
+                            </div>
                           ))}
                           {!timesheetEntries.length && (
                             <p className="mono p-1" style={{ fontSize: '10px', color: S.dim }}>No time entries yet.</p>
@@ -6432,7 +6464,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                   canDelete: group.id !== DEFAULT_TODO_LIST.id && todoLists.length > 1,
                                 })
                               }}
-                              className="type-overline truncate"
+                              className="type-overline break-words"
                               style={{ color: S.muted }}
                               title="Right-click to delete this title"
                             >
@@ -6502,7 +6534,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                 style={{ color: item.done ? '#30D158' : S.zinc }}
                                 title={item.done ? 'Mark as not done' : 'Mark as done'}
                               >
-                                {item.done ? '?' : '?'}
+                                {item.done ? 'x' : 'o'}
                               </button>
                               {editingTodoItemKey === `${group.id}:${item.id}` ? (
                                 <textarea
@@ -6561,10 +6593,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         <div className="group flex items-center gap-1.5">
                           <FileFlagDot flag={getFileFlag(activeProject?.root_path && entry.relativePath ? `${activeProject.root_path}\\${entry.relativePath.replace(/\//g, '\\')}` : '')} />
                           {entry.isDirectory !== undefined && (
-                            <span style={{ fontSize: '12px' }}>{entry.isDirectory ? '[DIR]' : getFileIcon(entry.name)}</span>
+                            <span style={{ fontSize: '12px' }}>{entry.isDirectory ? 'DIR' : getFileIcon(entry.name)}</span>
                           )}
-                          <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{entry.name}</p>
-                          <FileNameColumnHandle />
+                          <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(String(slotIndex)))}>{entry.name}</p>
+                          <FileNameColumnHandle slotKey={String(slotIndex)} />
                         </div>
                         {entry.subfolder !== undefined && (
                           <p className="mono mt-1" style={{ fontSize: '10px', color: S.zinc }}>..\{entry.subfolder}\</p>
@@ -6577,11 +6609,11 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         className="p-3 rounded border relative"
                         style={{ backgroundColor: 'rgba(120,53,15,0.05)', borderColor: 'rgba(120,53,15,0.4)' }}
                       >
-                        <div className="absolute top-2 right-2 mono" style={{ fontSize: '10px', color: '#F59E0B' }}>?? Out of Place</div>
+                        <div className="absolute top-2 right-2 mono" style={{ fontSize: '10px', color: '#F59E0B' }}>WARN Out of Place</div>
                         <div className="group flex items-center gap-1.5 pr-20">
                           <FileFlagDot flag={getFileFlag(activeProject?.root_path && file.relativePath ? `${activeProject.root_path}\\${file.relativePath.replace(/\//g, '\\')}` : '')} />
-                          <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{file.name}</p>
-                          <FileNameColumnHandle />
+                          <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' }, getSlotFileNameWidth(String(slotIndex)))}>{file.name}</p>
+                          <FileNameColumnHandle slotKey={String(slotIndex)} />
                         </div>
                         <p className="mono mt-1" style={{ fontSize: '10px', color: 'rgba(245,158,11,0.7)' }}>..\{file.subfolder || 'Root'}\</p>
                       </div>
@@ -6662,40 +6694,42 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             title={centerCanvasCollapsed || centerTopCollapsed ? 'Expand center sections' : 'Drag to resize center split'}
             onMouseDown={centerCanvasCollapsed || centerTopCollapsed ? undefined : beginCenterSplitResize}
             className={`shrink-0 ${(centerCanvasCollapsed || centerTopCollapsed) ? 'cursor-pointer' : 'cursor-row-resize'} hover:bg-[#34343A] transition-colors flex items-center justify-center gap-1`}
-            style={{ height: '10px', backgroundColor: '#000000', borderTop: '1px solid #34343A', borderBottom: '1px solid #34343A' }}
+            style={{ height: '18px', backgroundColor: '#000000' }}
           >
             <button
               onMouseDown={event => event.stopPropagation()}
               onClick={toggleCenterTop}
-              className="mono h-full text-[10px] leading-none px-1.5"
+              className="mono h-full text-base font-semibold leading-none px-2"
               style={{ color: centerTopCollapsed ? S.accent : S.zinc }}
               title={centerTopCollapsed ? 'Expand top panels' : 'Collapse top panels'}
             >
-              {centerTopCollapsed ? '?' : '?'}
+              {centerTopCollapsed ? '▲' : '▼'}
             </button>
             <button
               onMouseDown={event => event.stopPropagation()}
               onClick={toggleCenterCanvas}
-              className="mono h-full text-[10px] leading-none px-1.5"
+              className="mono h-full text-base font-semibold leading-none px-2"
               style={{ color: centerCanvasCollapsed ? S.accent : S.zinc }}
               title={centerCanvasCollapsed ? 'Expand canvas' : 'Collapse canvas'}
             >
-              {centerCanvasCollapsed ? '?' : '?'}
+              {centerCanvasCollapsed ? '▲' : '▼'}
             </button>
           </div>}
 
           {/* Canvas */}
           {!isBoxPopout && !centerCanvasCollapsed && (
-            <NoteCanvas
-              projectId={activeProject?.id ?? null}
-              projectRoot={activeProject?.root_path ?? null}
-              subprojectId={activeSubproject?.id ?? null}
-              subprojectLabel={activeSubproject?.display_name ?? null}
-              phase={activeNoteCanvasKey}
-              phaseLabel={activeNote?.name ?? DEFAULT_NOTE_SECTION.name}
-              onAddQuickLink={handleAddQuickLink}
-              onFolderRenamed={updateQuickLinksAfterPathRename}
-            />
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ border: `1px solid ${S.border}` }}>
+              <NoteCanvas
+                projectId={activeProject?.id ?? null}
+                projectRoot={activeProject?.root_path ?? null}
+                subprojectId={activeSubproject?.id ?? null}
+                subprojectLabel={activeSubproject?.display_name ?? null}
+                phase={activeNoteCanvasKey}
+                phaseLabel={activeNote?.name ?? DEFAULT_NOTE_SECTION.name}
+                onAddQuickLink={handleAddQuickLink}
+                onFolderRenamed={updateQuickLinksAfterPathRename}
+              />
+            </div>
           )}
         </main>
 
@@ -6714,11 +6748,11 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               event.stopPropagation()
               toggleRightPanel()
             }}
-            className="mono w-full h-16 text-sm leading-none flex items-center justify-center"
+            className="mono w-full h-16 text-base font-semibold leading-none flex items-center justify-center"
             style={{ color: S.zinc }}
             title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
           >
-            {rightCollapsed ? '<' : '>'}
+            {rightCollapsed ? '◀' : '▶'}
           </button>}
         </div>
 
@@ -6736,7 +6770,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'template' && draggingRightSectionKey !== 'template')} />
               <div className="p-3 border-b flex-1 min-h-0 overflow-y-auto" style={{ borderColor: S.border }}>
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="type-panel-title" style={{ color: S.muted }}>[TMP] Open Template</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>Open Template</h3>
                   <span
                     draggable
                     onDragStart={event => beginSectionDrag(event, 'template', setDraggingRightSectionKey)}
@@ -6800,7 +6834,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           className="flex items-center gap-2 rounded border px-2 py-1.5 cursor-grab active:cursor-grabbing"
                           style={{ backgroundColor: '#26262C', borderColor: S.border }}
                         >
-                          <span style={{ fontSize: '12px' }}>[DOC]</span>
+                          <span style={{ fontSize: '12px' }}>DOC</span>
                           <input
                             type="text"
                             value={item.destName}
@@ -6837,7 +6871,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'permanentLinks' && draggingRightSectionKey !== 'permanentLinks')} />
               <div className="p-3 border-b overflow-y-auto" style={{ borderColor: S.border }}>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="type-panel-title" style={{ color: S.muted }}>[LNK] Permanent Links</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>Permanent Links</h3>
                   <span
                     draggable
                     onDragStart={event => beginSectionDrag(event, 'permanentLinks', setDraggingRightSectionKey)}
@@ -6872,7 +6906,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 <div className="space-y-1">
                   {permanentQuickLinks.map(link => (
                     <div key={link.id} className="flex items-center gap-2 rounded border px-2 py-1.5" style={S.deeper}>
-                      <span className="shrink-0" style={{ fontSize: '12px' }}>{link.type === 'file' ? getFileIcon(link.label) : '[DIR]'}</span>
+                      <span className="shrink-0" style={{ fontSize: '12px' }}>{link.type === 'file' ? getFileIcon(link.label) : 'DIR'}</span>
                       <button
                         type="button"
                         onClick={() => handleOpenPermanentQuickLink(link)}
@@ -6880,7 +6914,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         title={link.path}
                       >
                         <p className="truncate text-xs font-medium" style={{ color: S.text }}>{link.label}</p>
-                        <p className="mono truncate" style={{ fontSize: '9px', color: S.dim }}>{link.path}</p>
+                        <p className="mono break-all" style={{ fontSize: '9px', color: S.dim }}>{link.path}</p>
                       </button>
                       <button
                         type="button"
@@ -6912,7 +6946,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'filing' && draggingRightSectionKey !== 'filing')} />
               <div className="p-3 border-b overflow-y-auto" style={{ borderColor: S.border }}>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="type-panel-title" style={{ color: S.muted }}>[QF] Quick Filing</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>Quick Filing</h3>
                   <span
                     draggable
                     onDragStart={event => beginSectionDrag(event, 'filing', setDraggingRightSectionKey)}
@@ -7016,10 +7050,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   <div className={`${quickFilingQueue.length ? 'max-h-24 p-1' : 'hidden'} overflow-y-auto space-y-1 border-t`} style={{ borderColor: S.border }}>
                     {quickFilingQueue.map(item => (
                       <div key={item.path} className="flex items-center gap-2 rounded px-2 py-1.5" style={{ backgroundColor: '#0D0D0F' }}>
-                        <span style={{ fontSize: '12px' }}>{item.isDirectory ? '[DIR]' : getFileIcon(item.name)}</span>
+                        <span style={{ fontSize: '12px' }}>{item.isDirectory ? 'DIR' : getFileIcon(item.name)}</span>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs truncate" style={{ color: S.text }}>{item.name}</p>
-                          <p className="mono truncate" style={{ fontSize: '9px', color: S.dim }}>{item.path}</p>
+                          <p className="mono break-all" style={{ fontSize: '9px', color: S.dim }}>{item.path}</p>
                         </div>
                         <button
                           type="button"
@@ -7072,7 +7106,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'gemini' && draggingRightSectionKey !== 'gemini')} />
               <div className="p-3 flex-1 min-h-0 overflow-y-auto">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="type-panel-title" style={{ color: S.muted }}>[AI] Document Summary AI</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>Document Summary AI</h3>
                   <div className="flex items-center gap-2">
                     {AUDIT_AI_ENABLED && activeProject && (
                       <button
@@ -7129,7 +7163,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           <div key={i} className="p-2 rounded border text-xs" style={{ ...S.elevated, opacity: r._moved ? 0.4 : 1 }}>
                             <div className="flex items-start gap-2">
                               <span style={{ color: statusColor, flexShrink: 0 }}>
-                                {r.status === 'error' ? '?' : r.status === 'warning' ? '!' : '?'}
+                                {r.status === 'error' ? 'x' : r.status === 'warning' ? '!' : '+'}
                               </span>
                               <p className="flex-1" style={{ color: '#D4D4D8' }}>{r.message}</p>
                             </div>
@@ -7161,8 +7195,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     <div key={entry.id} className="p-2.5 rounded border text-xs" style={S.elevated}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate" style={{ color: '#E4E4E7' }}>{entry.fileName}</p>
-                          <p className="mono mt-1 truncate" style={{ fontSize: '10px', color: S.zinc }}>{entry.question}</p>
+                          <p className="font-medium break-all" style={{ color: '#E4E4E7' }}>{entry.fileName}</p>
+                          <p className="mono mt-1 break-all" style={{ fontSize: '10px', color: S.zinc }}>{entry.question}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="mono" style={{ fontSize: '10px', color: S.dim }}>{entry.time}</span>
@@ -7215,7 +7249,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'calendar' && draggingRightSectionKey !== 'calendar')} />
               <div className="px-3 py-3 flex-1 min-h-0 overflow-y-auto border-t" style={{ borderColor: S.border }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="type-panel-title" style={{ color: S.muted }}>[CAL] Calendar</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>Calendar</h3>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setVisibleCalendarMonth(month => addMonths(month, -1))}
@@ -7430,7 +7464,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 className="text-xs hover:text-white transition"
                 style={{ color: '#8E8E93' }}
               >
-                ?
+                x
               </button>
             </div>
 
@@ -7523,7 +7557,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 className="text-xs hover:text-white transition"
                 style={{ color: '#8E8E93' }}
               >
-                ?
+                x
               </button>
             </div>
 
@@ -7548,12 +7582,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     }
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm truncate">{project.name}</span>
+                      <span className="text-sm break-words">{project.name}</span>
                       {activeProject?.id === project.id && (
                         <span className="mono text-[10px]" style={{ color: '#7A5CFF' }}>Active</span>
                       )}
                     </div>
-                    <p className="mono mt-0.5 truncate" style={{ fontSize: '10px', color: '#52525B' }}>{project.root_path}</p>
+                    <p className="mono mt-0.5 break-all" style={{ fontSize: '10px', color: '#52525B' }}>{project.root_path}</p>
                   </button>
                 )
               })}
@@ -7612,7 +7646,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 className="text-xs hover:text-white transition"
                 style={{ color: '#8E8E93' }}
               >
-                ?
+                x
               </button>
             </div>
 
@@ -7672,7 +7706,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             style={{ backgroundColor: '#1C1C20', borderColor: '#34343A' }}
           >
             <div className="px-4 pt-4 pb-3 border-b" style={{ borderColor: '#34343A' }}>
-              <p className="text-sm font-semibold" style={{ color: '#E4E4E7' }}>[AI] Analyse with AI</p>
+              <p className="text-sm font-semibold" style={{ color: '#E4E4E7' }}>Analyse with AI</p>
               <p className="text-xs mt-0.5 truncate" style={{ color: '#71717A' }}>
                 {docAnalysisDialog.fileName.length > 50
                   ? `${docAnalysisDialog.fileName.slice(0, 47)}...`
@@ -7836,7 +7870,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             style={{ backgroundColor: '#1C1C20', borderColor: '#34343A' }}
           >
             <div className="px-4 pt-4 pb-3 border-b shrink-0" style={{ borderColor: '#34343A' }}>
-              <p className="text-sm font-semibold" style={{ color: '#E4E4E7' }}>[AI] Analysis</p>
+              <p className="text-sm font-semibold" style={{ color: '#E4E4E7' }}>Analysis</p>
               <p className="text-xs mt-0.5 truncate" style={{ color: '#71717A' }}>
                 {docAnalysisResult.fileName.length > 55
                   ? `${docAnalysisResult.fileName.slice(0, 52)}...`
@@ -7875,6 +7909,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       )}
 
       {folderContextMenu && (
+
         <div
           className="fixed rounded border shadow-2xl z-[110] overflow-hidden"
           style={{
