@@ -153,6 +153,7 @@ const TIMELINE_FLAG_BURST_WINDOW_MS = 5 * 60 * 1000
 const TIMELINE_BURST_MIN_ITEMS = 4
 const SIDE_PANEL_RESIZER_WIDTH = 10
 const DEFAULT_FILE_NAME_COLUMN_WIDTH = 190
+const LAYOUT_PRESETS_STORAGE_KEY = 'docketos:layout-presets'
 const LEFT_PANEL_SECTION_KEYS = ['launchers', 'folders', 'active']
 const RIGHT_PANEL_SECTION_KEYS = ['template', 'permanentLinks', 'filing', 'gemini', 'calendar']
 const HIDEABLE_SIDE_PANEL_SECTION_KEYS = new Set(['launchers', 'folders', ...RIGHT_PANEL_SECTION_KEYS])
@@ -1377,7 +1378,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
   function loadLayoutPresets() {
     try {
-      return JSON.parse(localStorage.getItem('docketos:layout-presets') ?? '[]')
+      return JSON.parse(localStorage.getItem(LAYOUT_PRESETS_STORAGE_KEY) ?? '[]')
     } catch {
       return []
     }
@@ -1396,12 +1397,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       fileNameColumnWidthBySlot: { ...fileNameColumnWidthBySlot },
       savedAt: new Date().toISOString(),
     }
-    localStorage.setItem('docketos:layout-presets', JSON.stringify([...presets, preset]))
+    localStorage.setItem(LAYOUT_PRESETS_STORAGE_KEY, JSON.stringify([...presets, preset]))
   }
 
   function deleteLayoutPreset(id) {
     const presets = loadLayoutPresets().filter(p => p.id !== id)
-    localStorage.setItem('docketos:layout-presets', JSON.stringify(presets))
+    localStorage.setItem(LAYOUT_PRESETS_STORAGE_KEY, JSON.stringify(presets))
   }
 
   function applyLayoutPreset(preset) {
@@ -6354,14 +6355,14 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         </div>
                         <div className="space-y-2">
                           {timesheetGroups.map(group => (
-                            <div key={group.key} className="rounded border" style={S.panel}>
-                              <div className="flex items-center justify-between gap-2 border-b px-2 py-1.5" style={{ borderColor: S.border }}>
+                            <div key={group.key} className="space-y-1">
+                              <div className="flex items-center justify-between gap-2 border-b px-1 py-1.5" style={{ borderColor: S.border }}>
                                 <span className="type-overline whitespace-normal" style={{ color: S.muted, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{group.label}</span>
                                 <span className="mono text-[10px] rounded px-1.5 py-0.5 shrink-0" style={{ backgroundColor: '#0D0D0F', color: S.accent, border: `1px solid ${S.border}` }}>
                                   {group.totalHours.toFixed(2)}h
                                 </span>
                               </div>
-                              <div className="space-y-1 p-2">
+                              <div className="space-y-1 pt-1">
                                 {group.entries.map(entry => (
                                   <div key={entry.id} className="rounded border p-2" style={S.deeper}>
                                     <div className="flex flex-wrap items-start gap-2">
