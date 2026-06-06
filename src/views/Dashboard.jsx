@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import CreateProjectModal from '../components/CreateProjectModal.jsx'
 import FolderTree from '../components/FolderTree.jsx'
 import NoteCanvas from '../components/NoteCanvas.jsx'
@@ -76,16 +76,16 @@ function normalizePathFlagKey(value) {
 }
 
 const CENTER_PANEL_OPTIONS = [
-  { key: 'todo', label: 'Task List', icon: '📝' },
-  { key: 'inProgress', label: 'Subproject Browser', icon: '📁' },
-  { key: 'quickLinks', label: 'Quick Access Links', icon: '🔗' },
-  { key: 'selectedFolder', label: 'Selected Folder', icon: '🗂️' },
-  { key: 'recentFiles', label: 'Recent Files', icon: '🕘' },
-  { key: 'flagged', label: 'Flagged', icon: '🏷️' },
-  { key: 'timeline', label: 'Project Timeline', icon: '🧭' },
-  { key: 'timesheet', label: 'Project Timesheet', icon: '⏱️' },
-  { key: 'templates', label: 'Templates', icon: '📄' },
-  { key: 'plainNotes', label: 'Notes', icon: '🗒️' },
+  { key: 'todo', label: 'Task List', icon: '[TL]' },
+  { key: 'inProgress', label: 'Subproject Browser', icon: '[SB]' },
+  { key: 'quickLinks', label: 'Quick Access Links', icon: '[QL]' },
+  { key: 'selectedFolder', label: 'Selected Folder', icon: '[SF]' },
+  { key: 'recentFiles', label: 'Recent Files', icon: '[RF]' },
+  { key: 'flagged', label: 'Flagged', icon: '[FG]' },
+  { key: 'timeline', label: 'Project Timeline', icon: '[TM]' },
+  { key: 'timesheet', label: 'Project Timesheet', icon: '[TS]' },
+  { key: 'templates', label: 'Templates', icon: '[TP]' },
+  { key: 'plainNotes', label: 'Notes', icon: '[NT]' },
 ]
 
 function TimelineIcon({ kind }) {
@@ -134,7 +134,7 @@ const MIN_RECOVERY_BACKUP_INTERVAL_MINUTES = 1
 const MAX_RECOVERY_BACKUP_INTERVAL_MINUTES = 1440
 const CENTER_GRID_MIN_ROW_HEIGHT = 150
 const CENTER_GRID_TOP_CHROME_HEIGHT = 56
-const CENTER_GRID_VERTICAL_PADDING = 20
+const CENTER_GRID_VERTICAL_PADDING = 16
 const CENTER_GRID_ROW_GAP = 8
 const PROJECT_ACTIVITY_LIMIT = 80
 const LOW_VALUE_PROJECT_ACTIVITY_TITLES = new Set([
@@ -204,15 +204,17 @@ function parseSidePanelHiddenSections(raw) {
 
 // Feature flag: the project-wide File Audit AI (Gemini scan of all files in the
 // active project, suggesting moves/renames). Disabled by user request.
-// The other AI in this panel — the per-document PDF/Word Summary AI invoked
-// via right-click → Analyse — stays ON. See docs/ai-assistants.md.
+// The other AI in this panel - the per-document PDF/Word Summary AI invoked
+// via right-click > Analyse - stays ON. See docs/ai-assistants.md.
 const AUDIT_AI_ENABLED = false
 const S = {
-  panel:     { backgroundColor: '#121214', borderColor: '#1F1F23' },
-  elevated:  { backgroundColor: '#1A1A1E', borderColor: '#1F1F23' },
-  deeper:    { backgroundColor: '#0D0D0F', borderColor: '#1F1F23' },
-  border:    '#1F1F23',
+  panel:     { backgroundColor: '#1C1C20', borderColor: '#34343A' },
+  elevated:  { backgroundColor: '#26262C', borderColor: '#34343A' },
+  deeper:    { backgroundColor: '#0D0D0F', borderColor: '#34343A' },
+  border:    '#34343A',
+  hover:     '#303038',
   accent:    '#7A5CFF',
+  accentSoft:'#B8AAFF',
   muted:     '#8E8E93',
   dim:       '#3F3F46',
   zinc:      '#52525B',
@@ -449,7 +451,7 @@ function mergeSelectOptions(options, currentValue) {
     : [value, ...clean]
 }
 
-function ProjectInfoCombobox({ value, options, placeholder, disabled, onChange }) {
+function ProjectInfoCombobox({ value, options, placeholder, disabled, onChange, variant = 'default' }) {
   const [open, setOpen] = useState(false)
   const [inputValue, setInputValue] = useState(String(value ?? ''))
   const rootRef = useRef(null)
@@ -481,11 +483,17 @@ function ProjectInfoCombobox({ value, options, placeholder, disabled, onChange }
     if (e.key === 'Escape') { setInputValue(String(value ?? '')); setOpen(false); inputRef.current?.blur() }
   }
 
+  const compact = variant === 'compact'
+
   return (
     <div ref={rootRef} className="relative min-w-0">
       <div
         className="flex items-center rounded border overflow-hidden"
-        style={{ backgroundColor: '#1A1A1E', borderColor: open ? S.accent : S.border, minHeight: 29 }}
+        style={{
+          backgroundColor: compact ? 'transparent' : '#26262C',
+          borderColor: open ? S.accent : compact ? 'transparent' : S.border,
+          minHeight: compact ? 20 : 29,
+        }}
       >
         <input
           ref={inputRef}
@@ -497,15 +505,15 @@ function ProjectInfoCombobox({ value, options, placeholder, disabled, onChange }
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="flex-1 min-w-0 bg-transparent text-xs outline-none disabled:opacity-40"
-          style={{ color: inputValue ? S.text : S.muted, padding: '6px 8px' }}
+          className={`flex-1 min-w-0 bg-transparent text-xs outline-none disabled:opacity-40 ${compact ? 'text-right' : ''}`}
+          style={{ color: inputValue ? S.text : S.muted, padding: compact ? '0 4px 0 0' : '6px 8px' }}
         />
         <button
           type="button"
           tabIndex={-1}
           disabled={disabled}
           onMouseDown={e => { e.preventDefault(); setOpen(o => !o); inputRef.current?.focus() }}
-          className="shrink-0 flex items-center justify-center pr-2 pl-1 disabled:opacity-40"
+          className={`shrink-0 flex items-center justify-center disabled:opacity-40 ${compact ? 'pr-0 pl-1 opacity-40 hover:opacity-100' : 'pr-2 pl-1'}`}
         >
           <span
             aria-hidden="true"
@@ -521,35 +529,27 @@ function ProjectInfoCombobox({ value, options, placeholder, disabled, onChange }
           />
         </button>
       </div>
-
       {open && (
-        <div
-          className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded border shadow-xl"
-          style={{ ...S.elevated, boxShadow: '0 16px 32px rgba(0,0,0,0.36)' }}
-        >
-          <div className="thin-scrollbar max-h-44 overflow-y-auto py-1">
-            {filtered.length ? filtered.map(option => {
-              const isSelected = option.toLowerCase() === inputValue.toLowerCase()
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  tabIndex={-1}
-                  onMouseDown={e => e.preventDefault()}
-                  onClick={() => selectOption(option)}
-                  className="block w-full truncate px-2.5 py-1.5 text-left text-xs transition hover:bg-[#24242A]"
-                  style={{
-                    backgroundColor: isSelected ? '#1D1B2A' : 'transparent',
-                    color: isSelected ? S.text : S.labeltext,
-                  }}
-                >
-                  {option}
-                </button>
-              )
-            }) : (
-              <div className="px-2.5 py-1.5 text-xs" style={{ color: S.muted }}>No options</div>
-            )}
-          </div>
+        <div className="thin-scrollbar max-h-44 overflow-y-auto py-1">
+          {filtered.length ? filtered.map(option => {
+            const isSelected = option.toLowerCase() === inputValue.toLowerCase()
+            return (
+              <button
+                key={option}
+                type="button"
+                tabIndex={-1}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => selectOption(option)}
+                className="block w-full truncate px-2.5 py-1.5 text-left text-xs transition hover:bg-[#24242A]"
+                style={{
+                  backgroundColor: isSelected ? '#1D1B2A' : 'transparent',
+                  color: isSelected ? S.text : S.labeltext,
+                }}
+              >
+                {option}
+              </button>
+            )
+          }) : null}
         </div>
       )}
     </div>
@@ -1568,7 +1568,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
     quickLinkSyncInFlightRef.current = true
     try {
-      // One tree walk resolves every identity at once — not one full scan per link.
+      // One tree walk resolves every identity at once - not one full scan per link.
       const identities = pending.map(item => ({ dev: item.link.dev, ino: item.link.ino }))
       const foundList = await window.api.fsFindEntriesByIdentity({ rootPath, identities })
       const foundByKey = new Map((foundList ?? []).map(entry => [`${entry.dev}:${entry.ino}`, entry]))
@@ -2551,8 +2551,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       if (result.success) {
         if (result.filedCount > 0) clearQuickFilingQueue()
         const action = result.mode === 'move' ? 'moved' : 'copied'
-        const filedMessage = result.filedCount > 0 ? ` · ${result.filedCount} item${result.filedCount === 1 ? '' : 's'} ${action}` : ''
-        setFilingToast({ type: 'ok', message: `✓ ${result.folderName}${filedMessage}` })
+        const filedMessage = result.filedCount > 0 ? ` - ${result.filedCount} item${result.filedCount === 1 ? '' : 's'} ${action}` : ''
+        setFilingToast({ type: 'ok', message: `OK: ${result.folderName}${filedMessage}` })
         const filedItems = Array.isArray(result.files) ? result.files : []
         appendProjectActivityItems(filedItems.length > 0
           ? filedItems.map(item => ({
@@ -2638,7 +2638,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
         const result = await window.api.fsCopyFile({ from: sourcePath, to: destinationPath, destName })
         if (result.success) {
           setTplStagingItems(prev => prev.filter(s => s.id !== stagingId))
-          setTplToast({ type: 'ok', message: `Copied ${destName || sourcePath.split(/[\\/]/).pop()} ✓` })
+          setTplToast({ type: 'ok', message: `Copied ${destName || sourcePath.split(/[\\/]/).pop()} ?` })
           refreshFolderListing(destinationPath)
         } else {
           setTplToast({ type: 'error', message: result.error ?? 'Copy failed' })
@@ -2824,7 +2824,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
     const { filePath, fileName, question: rawQuestion, length, model } = docAnalysisDialog
     const lengthInstruction = length === 'detailed'
       ? '\n\nProvide a detailed, structured response with clear sections and headings.'
-      : '\n\nBe concise — one short paragraph.'
+      : '\n\nBe concise. One short paragraph.'
     const question = `${rawQuestion}${lengthInstruction}`
     setDocAnalysisDialog(null)
     setDocAnalysisPending({ fileName })
@@ -2983,7 +2983,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       kind: 'event',
       changeType: 'flag',
       title: 'File flag set',
-      detail: `${flag.name} · ${option?.label ?? color}`,
+      detail: `${flag.name} | ${option?.label ?? color}`,
       path,
       meta: { flag: option?.label ?? color },
       coalesceKey: `file-flag:${key}`,
@@ -3197,7 +3197,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
           e.projectId === (activeProject?.id ?? null) &&
           e.subprojectId === (activeSubproject?.id ?? null)
         )
-    // Dedupe by path — most recent open already wins since log is newest-first
+    // Dedupe by path - most recent open already wins since log is newest-first
     const seen = new Set()
     return scopedLog.filter(e => {
       if (seen.has(e.path)) return false
@@ -3431,10 +3431,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             },
             title: item.path,
           } : {})}
-          className={`flex-1 min-w-0 relative rounded-md overflow-hidden text-left transition ${item.path ? 'hover:bg-[#1A1A1E]' : ''}`}
+          className={`flex-1 min-w-0 relative rounded-md overflow-hidden text-left transition ${item.path ? 'hover:bg-[#303038]' : ''}`}
           style={{
-            backgroundColor: '#121214',
-            border: '1px solid #1F1F23',
+            backgroundColor: '#1C1C20',
+            border: '1px solid #34343A',
             padding: '8px 10px 8px 14px',
           }}
         >
@@ -3450,7 +3450,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             </div>
             <span
               className="mono text-[10px] tabular-nums shrink-0 rounded px-1.5 py-0.5"
-              style={{ color: S.muted, backgroundColor: '#0D0D0F', border: '1px solid #1F1F23' }}
+              style={{ color: S.muted, backgroundColor: '#0D0D0F', border: '1px solid #34343A' }}
             >
               {item.time}
             </span>
@@ -3461,14 +3461,14 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
           <div className="mt-2 grid gap-1">
             {detailRows.map(([label, value]) => (
               <div key={`${item.id}-${label}`} className="grid grid-cols-[68px_minmax(0,1fr)] gap-2 items-start">
-                <span className="mono text-[9px] uppercase tracking-wider" style={{ color: S.dim }}>{label}</span>
+                <span className="type-tiny-label" style={{ color: S.dim }}>{label}</span>
                 <span className="mono text-[9px] leading-snug break-words" style={{ color: S.muted }}>{value}</span>
               </div>
             ))}
           </div>
           <div className="mt-1.5 flex items-center gap-1.5">
             <span
-              className="mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded"
+              className="type-tiny-label px-1.5 py-0.5 rounded"
               style={{
                 color: color,
                 backgroundColor: color + '14',
@@ -3478,7 +3478,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               {badge}
             </span>
             {item.path && (
-              <span className="mono text-[9px]" style={{ color: S.dim }}>↗ open</span>
+              <span className="mono text-[9px]" style={{ color: S.dim }}>? open</span>
             )}
           </div>
         </RowTag>
@@ -3588,7 +3588,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       kind: 'event',
       changeType: 'timesheet',
       title: 'Timesheet entry added',
-      detail: `${entry.date} · ${entry.task} · ${entry.hours}h`,
+      detail: `${entry.date} | ${entry.task} | ${entry.hours}h`,
       meta: { date: entry.date, task: entry.task, hours: `${entry.hours}h` },
     })
   }
@@ -3639,7 +3639,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       kind: 'event',
       changeType: 'timesheet',
       title: 'Timesheet timer recorded',
-      detail: `${entry.date} · ${entry.task} · ${entry.hours}h`,
+      detail: `${entry.date} | ${entry.task} | ${entry.hours}h`,
       meta: { date: entry.date, task: entry.task, hours: `${entry.hours}h` },
     })
   }
@@ -3664,7 +3664,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       kind: 'event',
       changeType: 'timesheet',
       title: 'Timesheet entry removed',
-      detail: removed ? `${removed.date} · ${removed.task}` : entryId,
+      detail: removed ? `${removed.date} | ${removed.task}` : entryId,
     })
   }
 
@@ -3686,7 +3686,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       kind: 'event',
       changeType: 'timesheet',
       title: 'Timesheet entry updated',
-      detail: `${current?.task ?? 'Entry'} · ${field}`,
+      detail: `${current?.task ?? 'Entry'} | ${field}`,
       coalesceKey: `timesheet:${entryId}:${field}`,
     })
   }
@@ -3804,7 +3804,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       kind: 'event',
       changeType: 'task',
       title: 'Task added',
-      detail: `${todoLists.find(list => list.id === listId)?.name ?? 'Task List'} · ${title}`,
+      detail: `${todoLists.find(list => list.id === listId)?.name ?? 'Task List'} | ${title}`,
     })
   }
 
@@ -4263,10 +4263,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
     const columnEnd = getTrackRatio(columnWeights, columnIndex, 1)
     const rowStart = getTrackRatio(rowWeights, rowIndex)
     const rowEnd = getTrackRatio(rowWeights, rowIndex, rowSpan)
-    const leftInset = columnIndex === 0 ? 0 : 4
-    const rightInset = columnIndex === columnWeights.length - 1 ? 0 : 4
-    const topInset = rowIndex === 0 ? 0 : 4
-    const bottomInset = rowIndex + rowSpan >= rowWeights.length ? 0 : 4
+    const leftInset = 0
+    const rightInset = 0
+    const topInset = 0
+    const bottomInset = 0
 
     return {
       position: 'absolute',
@@ -4679,12 +4679,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 style={{ color: S.zinc, width: '14px' }}
                 title={isOpen ? 'Collapse' : 'Expand'}
               >
-                {isLoading ? '…' : isOpen ? '▾' : '▸'}
+                {isLoading ? '...' : isOpen ? '-' : '+'}
               </button>
             ) : (
-              <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>•</span>
+              <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>.</span>
             )}
-            <span style={{ fontSize: '12px' }}>{isDir ? '📁' : getFileIcon(entry.name)}</span>
+            <span style={{ fontSize: '12px' }}>{isDir ? '[DIR]' : getFileIcon(entry.name)}</span>
             <p className="text-xs truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{entry.name}</p>
             <FileNameColumnHandle />
           </div>
@@ -4717,8 +4717,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
   const SORT_OPTIONS = [
     { value: 'type-name', label: 'Type' },
-    { value: 'name-asc',  label: 'A→Z' },
-    { value: 'name-desc', label: 'Z→A' },
+    { value: 'name-asc',  label: 'A-Z' },
+    { value: 'name-desc', label: 'Z-A' },
     { value: 'date-desc', label: 'Newest' },
     { value: 'date-asc',  label: 'Oldest' },
   ]
@@ -4734,7 +4734,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             className="mono rounded px-1.5 py-0.5 transition"
             style={{
               fontSize: 9,
-              backgroundColor: sort === opt.value ? S.accent : '#1A1A1E',
+              backgroundColor: sort === opt.value ? S.accent : '#26262C',
               color: sort === opt.value ? '#fff' : S.zinc,
               border: `1px solid ${sort === opt.value ? S.accent : S.border}`,
             }}
@@ -4748,11 +4748,11 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
   function getFileIcon(name) {
     const ext = (name || '').split('.').pop().toLowerCase()
-    if (ext === 'pdf') return '📕'
-    if (ext === 'dwg' || ext === 'dxf') return '📐'
-    if (ext === 'xlsx' || ext === 'xls' || ext === 'xlsm' || ext === 'xlsb' || ext === 'csv') return '📊'
-    if (ext === 'docx' || ext === 'doc' || ext === 'docm' || ext === 'odt' || ext === 'rtf') return '📝'
-    return '📄'
+    if (ext === 'pdf') return '[PDF]'
+    if (ext === 'dwg' || ext === 'dxf') return '[CAD]'
+    if (ext === 'xlsx' || ext === 'xls' || ext === 'xlsm' || ext === 'xlsb' || ext === 'csv') return '[XLS]'
+    if (ext === 'docx' || ext === 'doc' || ext === 'docm' || ext === 'odt' || ext === 'rtf') return '[DOC]'
+    return '[FILE]'
   }
 
   function renderFolderEntries(entries, depth = 0, parentPath = selectedSubfolderPath) {
@@ -4815,12 +4815,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 style={{ color: S.zinc, width: '14px' }}
                 title={isOpen ? 'Collapse' : 'Expand'}
               >
-                {isLoading ? '…' : isOpen ? '▾' : '▸'}
+                {isLoading ? '...' : isOpen ? '-' : '+'}
               </button>
             ) : (
-              <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>•</span>
+              <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>.</span>
             )}
-            <span style={{ fontSize: '12px' }}>{isDir ? '📁' : getFileIcon(entry.name)}</span>
+            <span style={{ fontSize: '12px' }}>{isDir ? '[DIR]' : getFileIcon(entry.name)}</span>
             <span className="text-xs truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{entry.name}</span>
             <FileNameColumnHandle />
             <span className="min-w-0 flex-1" />
@@ -4874,12 +4874,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
     .sort((a, b) => a.date.getTime() - b.date.getTime())
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#080809', color: S.text }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#000000', color: S.text }}>
 
       {/* HEADER */}
       {!isBoxPopout && (
-      <header className="relative h-14 flex items-center justify-between px-4 border-b shrink-0" style={S.panel}>
-        <div className="flex items-center gap-3">
+      <header className="relative h-12 flex items-center justify-between px-3 border-b shrink-0" style={S.panel}>
+        <div className="flex items-center gap-2">
           {/* Project selector */}
           <div className="relative">
             <button
@@ -4887,9 +4887,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               className="flex items-center gap-2 px-3 py-1.5 rounded text-sm border hover:border-[#3A3A40] transition"
               style={S.elevated}
             >
-              <span className="mono text-xs" style={{ color: S.accent }}>[Ω]</span>
+              <span className="mono text-xs" style={{ color: S.accent }}>[O]</span>
               <span className="max-w-[200px] truncate">{activeProject?.name ?? 'Select Project'}</span>
-              <span className="mono text-xs" style={{ color: S.muted }}>▼</span>
+              <span className="mono text-xs" style={{ color: S.muted }}>?</span>
             </button>
             {showDropdown && (
               <div className="absolute top-full left-0 mt-1 w-64 border rounded shadow-2xl z-50" style={S.panel}>
@@ -4897,7 +4897,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   <button
                     key={p.id}
                     onClick={() => handleSetActive(p)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-[#1A1A1E] transition"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-[#303038] transition"
                     style={p.id === activeProject?.id ? { color: S.accent } : {}}
                   >
                     {p.name}
@@ -4909,7 +4909,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 <div className="border-t my-1" style={{ borderColor: S.border }} />
                 <button
                   onClick={() => { setShowDropdown(false); setShowNewProject(true) }}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-[#1A1A1E] transition"
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-[#303038] transition"
                   style={{ color: S.accent }}
                 >
                   + New Project
@@ -4931,12 +4931,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
         </div>
 
         <div className="pointer-events-none absolute left-1/2 top-1/2 min-w-0 max-w-[42vw] -translate-x-1/2 -translate-y-1/2 text-center">
-          <p className="truncate text-lg font-semibold" style={{ color: S.text }}>
+          <p className="truncate type-app-title" style={{ color: S.text }}>
             {activeSubproject?.display_name ?? (projectOverviewSelected ? 'Project Overview' : '')}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 border rounded px-2.5 py-1" style={S.deeper}>
             <span className={`w-2 h-2 rounded-full ${geminiKeySet ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`} />
             <span className={`mono text-xs ${geminiKeySet ? 'text-emerald-400' : 'text-zinc-500'}`}>
@@ -4959,70 +4959,95 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
         {/* LEFT PANEL */}
         <aside className="shrink-0 flex flex-col overflow-hidden border-r" style={{ ...S.panel, width: isBoxPopout || leftCollapsed ? '0px' : `${leftWidth}px`, borderRightWidth: isBoxPopout ? 0 : undefined }}>
-          <div className="shrink-0 p-4 pb-2">
+          <div className="shrink-0 p-3 pb-2">
 
             {/* Project Information */}
-            <section className="rounded border p-3" style={S.panel}>
-              <h3 className="mono text-xs uppercase tracking-widest mb-2" style={{ color: S.muted }}>📋 Project Information</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex gap-1">
-                  <input
-                    value={activeProjectInfo.jobNumber}
-                    onChange={event => updateProjectInfoField('jobNumber', event.target.value)}
-                    placeholder="Job number"
-                    disabled={!activeProject}
-                    className="flex-1 min-w-0 rounded border text-xs outline-none disabled:opacity-40"
-                    style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
-                  />
-                  <button
-                    type="button"
-                    disabled={!activeProject}
-                    title="Auto-detect job number from project path"
-                    onMouseDown={e => e.preventDefault()}
-                    onClick={() => {
-                      const inferred = inferJobNumberFromRootPath(activeProject?.root_path)
-                      if (inferred) updateProjectInfoField('jobNumber', inferred)
-                    }}
-                    className="shrink-0 rounded border px-2 text-xs hover:border-[#7A5CFF] transition disabled:opacity-40"
-                    style={{ ...S.elevated, color: S.muted }}
-                  >
-                    ⟳
-                  </button>
+            <section className="rounded border px-3 py-2.5" style={S.panel}>
+              <div className="mb-3 flex items-center gap-2">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true" style={{ color: S.muted }}>
+                  <ellipse cx="8" cy="3.5" rx="5" ry="2" />
+                  <path d="M3 3.5v7c0 1.1 2.2 2 5 2s5-.9 5-2v-7" />
+                  <path d="M3 7c0 1.1 2.2 2 5 2s5-.9 5-2" />
+                </svg>
+                <h3 className="type-panel-title" style={{ color: S.muted }}>Project Information</h3>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                <div className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-2">
+                  <span className="type-field-label" style={{ color: S.muted }}>Project ID</span>
+                  <div className="group flex min-w-0 items-center justify-end gap-1">
+                    <input
+                      value={activeProjectInfo.jobNumber}
+                      onChange={event => updateProjectInfoField('jobNumber', event.target.value)}
+                      placeholder="Job number"
+                      disabled={!activeProject}
+                      className="min-w-0 flex-1 bg-transparent text-right text-sm font-semibold outline-none disabled:opacity-40"
+                      style={{ color: activeProjectInfo.jobNumber ? '#64D2FF' : S.muted }}
+                    />
+                    <button
+                      type="button"
+                      disabled={!activeProject}
+                      title="Auto-detect job number from project path"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => {
+                        const inferred = inferJobNumberFromRootPath(activeProject?.root_path)
+                        if (inferred) updateProjectInfoField('jobNumber', inferred)
+                      }}
+                      className="mono shrink-0 rounded border px-1.5 py-0.5 text-[10px] opacity-0 transition group-hover:opacity-100 disabled:opacity-0"
+                      style={{ ...S.elevated, color: S.muted }}
+                    >
+                      Auto
+                    </button>
+                  </div>
                 </div>
-                <input
-                  value={activeProjectInfo.clientName}
-                  onChange={event => updateProjectInfoField('clientName', event.target.value)}
-                  placeholder="Client name"
-                  disabled={!activeProject}
-                  className="rounded border text-xs outline-none disabled:opacity-40"
-                  style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
-                />
-                <ProjectInfoCombobox
-                  value={activeProjectInfo.council}
-                  onChange={nextValue => updateProjectInfoField('council', nextValue)}
-                  placeholder="Council"
-                  options={councilOptions}
-                  disabled={!activeProject}
-                />
-                <ProjectInfoCombobox
-                  value={activeProjectInfo.waterAuthority}
-                  onChange={nextValue => updateProjectInfoField('waterAuthority', nextValue)}
-                  placeholder="Water authority"
-                  options={waterAuthorityOptions}
-                  disabled={!activeProject}
-                />
-                <ProjectInfoCombobox
-                  value={activeProjectInfo.projectManager}
-                  onChange={nextValue => updateProjectInfoField('projectManager', nextValue)}
-                  placeholder="Project manager"
-                  options={projectManagerOptions}
-                  disabled={!activeProject}
-                />
+                <div className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-2">
+                  <span className="type-field-label" style={{ color: S.muted }}>Client</span>
+                  <input
+                    value={activeProjectInfo.clientName}
+                    onChange={event => updateProjectInfoField('clientName', event.target.value)}
+                    placeholder="Client name"
+                    disabled={!activeProject}
+                    className="min-w-0 bg-transparent text-right text-sm outline-none disabled:opacity-40"
+                    style={{ color: activeProjectInfo.clientName ? S.text : S.muted }}
+                  />
+                </div>
+                <div className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-2">
+                  <span className="type-field-label" style={{ color: S.muted }}>Manager</span>
+                  <ProjectInfoCombobox
+                    value={activeProjectInfo.projectManager}
+                    onChange={nextValue => updateProjectInfoField('projectManager', nextValue)}
+                    placeholder="Project manager"
+                    options={projectManagerOptions}
+                    disabled={!activeProject}
+                    variant="compact"
+                  />
+                </div>
+                <div className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-2">
+                  <span className="type-field-label" style={{ color: S.muted }}>Location</span>
+                  <ProjectInfoCombobox
+                    value={activeProjectInfo.council}
+                    onChange={nextValue => updateProjectInfoField('council', nextValue)}
+                    placeholder="Council"
+                    options={councilOptions}
+                    disabled={!activeProject}
+                    variant="compact"
+                  />
+                </div>
+                <div className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-2">
+                  <span className="type-field-label" style={{ color: S.muted }}>Authority</span>
+                  <ProjectInfoCombobox
+                    value={activeProjectInfo.waterAuthority}
+                    onChange={nextValue => updateProjectInfoField('waterAuthority', nextValue)}
+                    placeholder="Water authority"
+                    options={waterAuthorityOptions}
+                    disabled={!activeProject}
+                    variant="compact"
+                  />
+                </div>
               </div>
             </section>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 flex flex-col">
 
             {/* System Launchers */}
             <section
@@ -5034,7 +5059,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             >
               <div style={getDropIndicatorStyle(leftDropTargetKey === 'launchers' && draggingLeftSectionKey !== 'launchers')} />
               <div className="shrink-0 mb-3 flex items-center justify-between gap-2">
-                <h3 className="mono text-xs uppercase tracking-widest" style={{ color: S.muted }}>⚡ System Launchers</h3>
+                <h3 className="type-panel-title" style={{ color: S.muted }}>? System Launchers</h3>
                 <span
                   draggable
                   onDragStart={event => beginSectionDrag(event, 'launchers', setDraggingLeftSectionKey)}
@@ -5043,7 +5068,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   style={getSectionHandleStyle(draggingLeftSectionKey === 'launchers')}
                   title="Drag to reorder panel sections"
                 >
-                  ⋮⋮
+                  ??
                 </span>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
@@ -5080,7 +5105,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             >
               <div style={getDropIndicatorStyle(leftDropTargetKey === 'folders' && draggingLeftSectionKey !== 'folders')} />
               <div className="shrink-0 flex items-center justify-between mb-2">
-                <h3 className="mono text-xs uppercase tracking-widest" style={{ color: S.muted }}>📁 Project Folders</h3>
+                <h3 className="type-panel-title" style={{ color: S.muted }}>[DIR] Project Folders</h3>
                 <div className="flex items-center gap-2">
                   {activeProject && (
                     <button
@@ -5088,7 +5113,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       className="mono text-xs hover:text-white transition"
                       style={{ color: S.zinc, fontSize: '10px' }}
                     >
-                      Open Root ↗
+                      Open Root
                     </button>
                   )}
                   <span
@@ -5099,7 +5124,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     style={getSectionHandleStyle(draggingLeftSectionKey === 'folders')}
                     title="Drag to reorder panel sections"
                   >
-                    ⋮⋮
+                    ::
                   </span>
                 </div>
               </div>
@@ -5108,17 +5133,17 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   type="text"
                   value={fileSearchQuery}
                   onChange={e => setFileSearchQuery(e.target.value)}
-                  placeholder="Search files…"
+                  placeholder="Search files..."
                   disabled={!activeProject?.root_path}
                   className="w-full rounded border text-xs outline-none disabled:opacity-40"
-                  style={{ backgroundColor: '#1A1A1E', borderColor: fileSearchQuery ? '#7A5CFF' : S.border, color: S.text, padding: '5px 8px' }}
+                  style={{ backgroundColor: '#26262C', borderColor: fileSearchQuery ? '#7A5CFF' : S.border, color: S.text, padding: '5px 8px' }}
                 />
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto pb-2">
                 {fileSearchQuery.trim() ? (
                   <div className="space-y-0.5 pr-1">
                     {fileSearchLoading && (
-                      <p className="mono px-1 py-2 text-[10px]" style={{ color: S.dim }}>Searching…</p>
+                      <p className="mono px-1 py-2 text-[10px]" style={{ color: S.dim }}>Searching...</p>
                     )}
                     {!fileSearchLoading && fileSearchResults.length === 0 && (
                       <p className="mono px-1 py-2 text-[10px]" style={{ color: S.dim }}>No files found.</p>
@@ -5184,7 +5209,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             >
               <div style={getDropIndicatorStyle(leftDropTargetKey === 'active' && draggingLeftSectionKey !== 'active')} />
               <div className="shrink-0 flex items-center justify-between gap-2 mb-2">
-                <h3 className="mono text-xs uppercase tracking-widest" style={{ color: S.muted }}>📌 Active Subproject</h3>
+                <h3 className="type-panel-title" style={{ color: S.muted }}>?? Active Subproject</h3>
                 <div className="flex items-center gap-2">
                   {activeProject && (
                     <button
@@ -5212,7 +5237,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     style={getSectionHandleStyle(draggingLeftSectionKey === 'active')}
                     title="Drag to reorder panel sections"
                   >
-                    ⋮⋮
+                    ??
                   </span>
                 </div>
               </div>
@@ -5222,7 +5247,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     onClick={handleActivateProjectOverview}
                     className="w-full text-left px-2 py-2 rounded border transition"
                     style={projectOverviewSelected
-                      ? { backgroundColor: '#1A1A1E', borderColor: S.accent, color: S.text }
+                      ? { backgroundColor: '#26262C', borderColor: S.accent, color: S.text }
                       : { backgroundColor: '#101013', borderColor: S.border, color: S.text }
                     }
                   >
@@ -5244,7 +5269,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       <div className="space-y-2">
                         <p className="mono text-xs" style={{ color: S.dim }}>No subprojects yet. Click Refresh or select the Technical folder.</p>
                         {subprojectDiscovery && (
-                          <div className="mono rounded border p-2" style={{ backgroundColor: '#080809', borderColor: S.border, color: S.zinc, fontSize: '10px' }}>
+                          <div className="mono rounded border p-2" style={{ backgroundColor: '#000000', borderColor: S.border, color: S.zinc, fontSize: '10px' }}>
                             <p>Status: {subprojectDiscovery.status}</p>
                             {subprojectDiscovery.rootPath && <p className="truncate" title={subprojectDiscovery.rootPath}>Root: {subprojectDiscovery.rootPath}</p>}
                             {subprojectDiscovery.technicalPath
@@ -5263,7 +5288,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           onClick={() => handleActivateSubproject(subproject)}
                           className="w-full text-left px-2 py-2 rounded border transition"
                           style={isCurrent
-                            ? { backgroundColor: '#1A1A1E', borderColor: S.accent, color: S.text }
+                            ? { backgroundColor: '#26262C', borderColor: S.accent, color: S.text }
                             : { backgroundColor: '#101013', borderColor: S.border, color: S.text }
                           }
                         >
@@ -5289,8 +5314,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 aria-orientation="horizontal"
                 title="Drag to resize adjacent sections"
                 onMouseDown={event => beginVerticalResize('left-panel-vertical', firstKey, secondKey, event, leftSectionHeights)}
-                className="my-2 shrink-0 cursor-row-resize hover:bg-[#1F1F23] transition-colors rounded"
-                style={{ height: '8px', backgroundColor: '#080809', order: index * 2 + 1 }}
+                className="my-2 shrink-0 cursor-row-resize hover:bg-[#34343A] transition-colors rounded"
+                style={{ height: '8px', backgroundColor: '#000000', order: index * 2 + 1 }}
               />
             ))}
             {leftBottomSectionKey && (
@@ -5299,8 +5324,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 aria-orientation="horizontal"
                 title="Drag to resize the bottom left section downward"
                 onMouseDown={event => beginFooterResize(leftBottomSectionKey, event)}
-                className="my-2 shrink-0 cursor-row-resize hover:bg-[#1F1F23] transition-colors rounded"
-                style={{ height: '8px', backgroundColor: '#080809', order: visibleLeftSectionOrder.length * 2 }}
+                className="my-2 shrink-0 cursor-row-resize hover:bg-[#34343A] transition-colors rounded"
+                style={{ height: '8px', backgroundColor: '#000000', order: visibleLeftSectionOrder.length * 2 }}
               />
             )}
           </div>
@@ -5312,8 +5337,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
           aria-orientation="vertical"
           title={leftCollapsed ? 'Expand left panel' : 'Drag to resize the left panel'}
           onMouseDown={beginResizeLeft}
-          className={`shrink-0 ${leftCollapsed ? 'cursor-pointer' : 'cursor-col-resize'} hover:bg-[#1F1F23] transition-colors flex items-center justify-center`}
-          style={{ width: isBoxPopout ? '0px' : `${SIDE_PANEL_RESIZER_WIDTH}px`, backgroundColor: '#080809' }}
+          className={`shrink-0 ${leftCollapsed ? 'cursor-pointer' : 'cursor-col-resize'} hover:bg-[#34343A] transition-colors flex items-center justify-center`}
+          style={{ width: isBoxPopout ? '0px' : `${SIDE_PANEL_RESIZER_WIDTH}px`, backgroundColor: '#000000' }}
         >
           {!isBoxPopout && <button
             onMouseDown={event => event.stopPropagation()}
@@ -5325,12 +5350,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             style={{ color: S.zinc }}
             title={leftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
           >
-            {leftCollapsed ? '›' : '‹'}
+            {leftCollapsed ? '>' : '<'}
           </button>}
         </div>
 
         {/* CENTER PANEL */}
-        <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: '#080809' }}>
+        <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: '#000000' }}>
 
           {/* Kanban */}
           {(isBoxPopout || !centerTopCollapsed) && (
@@ -5442,30 +5467,30 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       }}
                       onDragEnd={() => setDraggingCenterPanelIndex(null)}
                       className={`mono grid h-6 w-5 shrink-0 place-items-center rounded border ${isBoxPopout ? '' : 'cursor-grab active:cursor-grabbing'}`}
-                      style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.zinc }}
+                      style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.zinc }}
                       title={isBoxPopout ? 'Popped out box' : 'Drag to move this box'}
                     >
-                      {isBoxPopout ? '□' : '⋮⋮'}
+                      {isBoxPopout ? '[]' : '::'}
                     </span>
                     <span className="shrink-0" style={{ fontSize: '13px' }}>{panelOption.icon}</span>
                     <select
                       value={key}
                       onChange={event => updateCenterPanelBox(slotIndex, event.target.value)}
                       disabled={isBoxPopout}
-                      className="min-w-0 flex-1 rounded border mono text-xs uppercase tracking-wider outline-none"
-                      style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.labeltext, padding: '4px 6px' }}
+                      className="min-w-0 flex-1 rounded border type-field-label outline-none"
+                      style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.labeltext, padding: '4px 6px' }}
                       title={`Choose content for box ${slotIndex + 1}`}
                     >
                       {CENTER_PANEL_OPTIONS.map(option => (
                         <option key={option.key} value={option.key}>{option.label}</option>
                       ))}
                     </select>
-                    <span className="mono text-xs px-2 py-0.5 rounded shrink-0" style={{ backgroundColor: '#1A1A1E', color: S.labeltext }}>{total}</span>
+                    <span className="mono text-xs px-2 py-0.5 rounded shrink-0" style={{ backgroundColor: '#26262C', color: S.labeltext }}>{total}</span>
                     {!isBoxPopout && (
                       <button
                         onClick={() => openCenterPanelBoxWindow(key, slotIndex)}
                         className="mono text-[10px] px-1.5 py-0.5 rounded border hover:text-white transition shrink-0"
-                        style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.zinc }}
+                        style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.zinc }}
                         title={`Open ${panelOption.label} in a separate window`}
                       >
                         Pop Out
@@ -5475,7 +5500,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       <button
                         onClick={() => removeCenterPanelBox(slotIndex)}
                         className="mono text-[10px] px-1.5 py-0.5 rounded border hover:text-white transition shrink-0"
-                        style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.zinc }}
+                        style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.zinc }}
                         title={`Remove box ${slotIndex + 1}`}
                       >
                         Remove
@@ -5504,7 +5529,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             setExpandedFolderPaths({})
                           }}
                           className="w-full rounded border text-xs outline-none"
-                          style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                          style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                         >
                           {!subfolderOptions.length && <option value="">No subfolders available</option>}
                           {subfolderOptions.map(folder => (
@@ -5546,9 +5571,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                 }}
                                 title={selectedSubfolderPath}
                               >
-                                <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>↳</span>
+                                <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>?</span>
                                 <FileFlagDot flag={getFileFlag(selectedSubfolderPath)} />
-                                <span style={{ fontSize: '12px' }}>📁</span>
+                                <span style={{ fontSize: '12px' }}>??</span>
                                 <p className="text-xs font-medium truncate" style={{ color: '#E4E4E7' }}>{getPathName(selectedSubfolderPath)}</p>
                                 <span className="mono ml-auto text-[10px] shrink-0" style={{ color: S.zinc }}>Move Here</span>
                               </div>
@@ -5585,7 +5610,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               if (nextName !== null) renameTodoList(selectedTodoListId, nextName)
                             }}
                             className="min-w-[120px] max-w-[160px] rounded border text-xs outline-none"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                             title="Choose task list for this box. Double-click to rename."
                           >
                             {todoLists.map(list => (
@@ -5598,15 +5623,15 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             onKeyDown={event => event.key === 'Enter' && addTodoList(slotIndex)}
                             placeholder="Add task list"
                             className="flex-1 rounded border text-xs outline-none"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                           />
                           <button
                             onClick={() => toggleTodoDoneHidden(slotIndex)}
                             disabled={completedTodoCount === 0}
                             className="mono text-[10px] px-2 rounded border transition disabled:opacity-40"
                             style={todoDoneHidden
-                              ? { backgroundColor: '#1A1A1E', borderColor: S.accent, color: S.text }
-                              : { backgroundColor: '#1A1A1E', borderColor: S.border, color: S.zinc }
+                              ? { backgroundColor: '#26262C', borderColor: S.accent, color: S.text }
+                              : { backgroundColor: '#26262C', borderColor: S.border, color: S.zinc }
                             }
                             title="Show or hide completed tasks without deleting them"
                           >
@@ -5616,8 +5641,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             onClick={() => setTodoViewMode(slotIndex, todoViewMode === 'isolated' ? 'all' : 'isolated')}
                             className="mono text-[10px] px-2 rounded border transition"
                             style={todoViewMode === 'isolated'
-                              ? { backgroundColor: '#1A1A1E', borderColor: S.accent, color: S.text }
-                              : { backgroundColor: '#1A1A1E', borderColor: S.border, color: S.zinc }
+                              ? { backgroundColor: '#26262C', borderColor: S.accent, color: S.text }
+                              : { backgroundColor: '#26262C', borderColor: S.border, color: S.zinc }
                             }
                             title="Toggle task list view mode"
                           >
@@ -5631,7 +5656,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             onKeyDown={event => event.key === 'Enter' && addTodoItem(slotIndex, selectedTodoListId)}
                             placeholder="Add task"
                             className="flex-1 rounded border text-xs outline-none"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                           />
                         </div>
                       </div>
@@ -5642,7 +5667,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         <p className="mono p-1" style={{ fontSize: '10px', color: S.dim }}>
                           {activeSubproject
                             ? 'Quick links are scoped to the active subproject.'
-                            : 'No active subproject selected — using project quick links.'}
+                            : 'No active subproject selected - using project quick links.'}
                         </p>
                         {quickLinks.map(link => (
                           <div
@@ -5680,7 +5705,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             title="Drag to reorder"
                           >
                             <div className="group flex items-center gap-2">
-                              <span className="mono" style={{ fontSize: '11px', color: S.zinc }}>⋮⋮</span>
+                              <span className="mono" style={{ fontSize: '11px', color: S.zinc }}>::</span>
                               <FileFlagDot flag={getFileFlag(link.path)} />
                               {link.isDirectory ? (
                                 <button
@@ -5689,12 +5714,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                   style={{ color: S.zinc, width: '14px' }}
                                   title={expandedQuickLinkFolders[link.path] ? 'Collapse' : 'Expand'}
                                 >
-                                  {loadingQuickLinkFolders[link.path] ? '…' : expandedQuickLinkFolders[link.path] ? '▾' : '▸'}
+                                  {loadingQuickLinkFolders[link.path] ? '...' : expandedQuickLinkFolders[link.path] ? '-' : '+'}
                                 </button>
                               ) : (
-                                <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>•</span>
+                                <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>.</span>
                               )}
-                              <span style={{ fontSize: '12px' }}>{link.isDirectory ? '📁' : getFileIcon(link.name)}</span>
+                              <span style={{ fontSize: '12px' }}>{link.isDirectory ? '[DIR]' : getFileIcon(link.name)}</span>
                               <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{link.name}</p>
                               <FileNameColumnHandle />
                               <span className="min-w-0 flex-1" />
@@ -5774,7 +5799,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           >
                             <div className="group flex items-center gap-2">
                               <FileFlagDot flag={getFileFlag(selectedTreeFolderPath)} />
-                              <span style={{ fontSize: '12px' }}>📁</span>
+                              <span style={{ fontSize: '12px' }}>??</span>
                               <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{getPathName(selectedTreeFolderPath)}</p>
                               <FileNameColumnHandle />
                             </div>
@@ -5814,9 +5839,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                       }}
                                       title={selectedTreeFolderParentPath}
                                     >
-                                      <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>↰</span>
+                                      <span className="mono text-xs" style={{ color: S.zinc, width: '14px' }}>?</span>
                                       <FileFlagDot flag={getFileFlag(selectedTreeFolderParentPath)} />
-                                      <span style={{ fontSize: '12px' }}>📁</span>
+                                      <span style={{ fontSize: '12px' }}>??</span>
                                       <p className="text-xs font-medium truncate" style={{ color: '#E4E4E7' }}>{getPathName(selectedTreeFolderParentPath)}</p>
                                       <span className="mono ml-auto text-[10px] shrink-0" style={{ color: S.zinc }}>Parent</span>
                                     </div>
@@ -5840,7 +5865,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             onClick={() => setRecentFilesShowAll(v => !v)}
                             className="mono text-[10px] rounded border px-2 py-0.5 transition hover:border-[#7A5CFF]"
                             style={{ borderColor: recentFilesShowAll ? '#7A5CFF' : S.border, color: recentFilesShowAll ? '#7A5CFF' : S.zinc, backgroundColor: 'transparent' }}
-                            title={recentFilesShowAll ? 'Showing all project opens — click to scope to subproject' : 'Showing subproject opens — click to show all project opens'}
+                            title={recentFilesShowAll ? 'Showing all project opens - click to scope to subproject' : 'Showing subproject opens - click to show all project opens'}
                           >
                             {recentFilesShowAll ? 'Project' : 'Subproject'}
                           </button>
@@ -5892,7 +5917,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               setFlaggedShowAllBySlot(prev => ({ ...prev, [slotIndex]: false }))
                             }}
                             className="w-full rounded border text-xs outline-none"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                           >
                             {FILE_FLAG_OPTIONS.map(option => (
                               <option key={option.key} value={option.key}>{option.label}</option>
@@ -5925,7 +5950,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                 className="rounded-full"
                                 style={{ width: 9, height: 9, backgroundColor: group.option.color, boxShadow: `0 0 8px ${group.option.color}66` }}
                               />
-                              <p className="mono text-[10px] uppercase tracking-[0.08em]" style={{ color: S.zinc }}>{group.option.label}</p>
+                              <p className="type-overline" style={{ color: S.zinc }}>{group.option.label}</p>
                               <span className="mono text-[10px]" style={{ color: S.dim }}>{group.items.length}</span>
                             </div>,
                             ...group.items.map(item => (
@@ -5948,7 +5973,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               >
                                 <div className="flex items-center gap-2">
                                   <FileFlagDot flag={item} />
-                                  <span style={{ fontSize: '12px' }}>{item.isDirectory ? '📁' : getFileIcon(item.name)}</span>
+                                  <span style={{ fontSize: '12px' }}>{item.isDirectory ? '[DIR]' : getFileIcon(item.name)}</span>
                                   <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{item.name}</p>
                                   <FileNameColumnHandle />
                                 </div>
@@ -5975,7 +6000,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             >
                               <div className="flex items-center gap-2">
                                 <FileFlagDot flag={item} />
-                                <span style={{ fontSize: '12px' }}>{item.isDirectory ? '📁' : getFileIcon(item.name)}</span>
+                                <span style={{ fontSize: '12px' }}>{item.isDirectory ? '[DIR]' : getFileIcon(item.name)}</span>
                                 <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{item.name}</p>
                                 <FileNameColumnHandle />
                               </div>
@@ -6014,7 +6039,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             }}
                             disabled={!activeProject}
                             className="min-w-[120px] max-w-[180px] rounded border text-xs outline-none disabled:opacity-40"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                             title="Choose note section. Right-click to delete, double-click to rename."
                           >
                             {noteSections.map(note => (
@@ -6028,13 +6053,13 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             placeholder="Add note section"
                             disabled={!activeProject}
                             className="min-w-0 flex-1 rounded border text-xs outline-none disabled:opacity-40"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 8px' }}
                           />
                           <button
                             onClick={addNoteSection}
                             disabled={!newNoteTitle.trim() || !activeProject}
                             className="text-xs px-2 rounded border transition disabled:opacity-40"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text }}
+                            style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text }}
                           >
                             Add
                           </button>
@@ -6045,7 +6070,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           placeholder={`Write ${activeNote?.name ?? 'project'} notes here...`}
                           disabled={!activeProject}
                           className="w-full flex-1 min-h-[120px] resize-none rounded border text-xs outline-none leading-relaxed disabled:opacity-40"
-                          style={{ backgroundColor: '#121214', borderColor: S.border, color: S.text, padding: '10px 12px' }}
+                          style={{ backgroundColor: '#1C1C20', borderColor: S.border, color: S.text, padding: '10px 12px' }}
                           spellCheck="true"
                         />
                       </div>
@@ -6054,7 +6079,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     {key === 'timeline' && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2 px-1">
-                          <span className="mono text-[10px] uppercase tracking-widest" style={{ color: S.muted }}>Activity</span>
+                          <span className="type-overline" style={{ color: S.muted }}>Activity</span>
                           <button
                             onClick={clearProjectTimeline}
                             disabled={!activeProject || timelineItems.length === 0}
@@ -6069,8 +6094,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             {groupTimelineByDay(timelineItems).map((group, gIdx, allGroups) => (
                               <div key={group.label} className={gIdx > 0 ? 'mt-4' : ''}>
                                 <div className="flex items-center gap-2 px-1 mb-2">
-                                  <span className="mono text-[10px] uppercase tracking-widest" style={{ color: S.muted }}>{group.label}</span>
-                                  <span className="flex-1 h-px" style={{ background: 'linear-gradient(to right, #1F1F23, transparent)' }} />
+                                  <span className="type-overline" style={{ color: S.muted }}>{group.label}</span>
+                                  <span className="flex-1 h-px" style={{ background: 'linear-gradient(to right, #34343A, transparent)' }} />
                                   <span className="mono text-[9px] tabular-nums" style={{ color: S.dim }}>{group.items.length}</span>
                                 </div>
                                 <div className="relative">
@@ -6114,8 +6139,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                           <div
                                             className="flex-1 min-w-0 relative rounded-md overflow-hidden"
                                             style={{
-                                              backgroundColor: '#121214',
-                                              border: '1px solid #1F1F23',
+                                              backgroundColor: '#1C1C20',
+                                              border: '1px solid #34343A',
                                               padding: '8px 10px 8px 14px',
                                             }}
                                           >
@@ -6133,7 +6158,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                                 <p className="text-xs font-semibold leading-snug truncate" style={{ color: '#F5F5F7' }}>{node.title}</p>
                                                 <span
                                                   className="mono text-[10px] tabular-nums shrink-0 rounded px-1.5 py-0.5"
-                                                  style={{ color: S.muted, backgroundColor: '#0D0D0F', border: '1px solid #1F1F23' }}
+                                                  style={{ color: S.muted, backgroundColor: '#0D0D0F', border: '1px solid #34343A' }}
                                                 >
                                                   {burstFirst.time}
                                                 </span>
@@ -6143,7 +6168,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                               </p>
                                               <div className="mt-1.5 flex items-center gap-1.5">
                                                 <span
-                                                  className="mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded"
+                                                  className="type-tiny-label px-1.5 py-0.5 rounded"
                                                   style={{
                                                     color: burstColor,
                                                     backgroundColor: burstColor + '14',
@@ -6178,14 +6203,14 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
                     {key === 'timesheet' && (
                       <div className="space-y-2">
-                        <div className="grid grid-cols-[125px_1fr_78px_minmax(150px,0.8fr)_auto] gap-2 items-start">
+                        <div className="grid grid-cols-[116px_1fr_72px_minmax(140px,0.75fr)_auto] gap-2 items-end border-b pb-2" style={{ borderColor: S.border }}>
                           <input
                             type="date"
                             value={timesheetDraft.date}
                             onChange={event => updateTimesheetDraft('date', event.target.value)}
                             disabled={!activeProject}
-                            className="min-w-0 rounded border text-xs outline-none disabled:opacity-40"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            className="min-w-0 bg-transparent text-xs outline-none disabled:opacity-40"
+                            style={{ borderBottom: `1px solid ${S.border}`, color: S.text, padding: '4px 2px 5px' }}
                           />
                           <input
                             value={timesheetDraft.task}
@@ -6193,8 +6218,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             onKeyDown={event => event.key === 'Enter' && addTimesheetEntry()}
                             placeholder="Task / activity"
                             disabled={!activeProject}
-                            className="min-w-0 rounded border text-xs outline-none disabled:opacity-40"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            className="min-w-0 bg-transparent text-xs outline-none disabled:opacity-40"
+                            style={{ borderBottom: `1px solid ${S.border}`, color: S.text, padding: '4px 2px 5px' }}
                           />
                           <input
                             type="number"
@@ -6205,8 +6230,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             onKeyDown={event => event.key === 'Enter' && addTimesheetEntry()}
                             placeholder="Hours"
                             disabled={!activeProject}
-                            className="min-w-0 rounded border text-xs outline-none disabled:opacity-40"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                            className="min-w-0 bg-transparent text-xs outline-none disabled:opacity-40"
+                            style={{ borderBottom: `1px solid ${S.border}`, color: S.text, padding: '4px 2px 5px' }}
                           />
                           <textarea
                             value={timesheetDraft.note}
@@ -6214,16 +6239,16 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             placeholder="Optional note"
                             disabled={!activeProject}
                             rows={getTimesheetNoteRows(timesheetDraft.note)}
-                            className="min-w-0 resize-none rounded border text-xs outline-none disabled:opacity-40"
-                            style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px', lineHeight: '16px' }}
+                            className="min-w-0 resize-none bg-transparent text-xs outline-none disabled:opacity-40"
+                            style={{ borderBottom: `1px solid ${S.border}`, color: S.text, padding: '4px 2px 5px', lineHeight: '16px' }}
                           />
                           <div className="flex gap-1">
                             <button
                               type="button"
                               onClick={addTimesheetEntry}
                               disabled={!activeProject || !String(timesheetDraft.task ?? '').trim() || !(Number(timesheetDraft.hours) > 0)}
-                              className="text-xs px-2 rounded border transition disabled:opacity-40"
-                              style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text }}
+                              className="type-command px-2 py-1 rounded border transition disabled:opacity-40"
+                              style={{ backgroundColor: 'transparent', borderColor: S.border, color: S.text }}
                             >
                               Add
                             </button>
@@ -6231,7 +6256,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               type="button"
                               onClick={startTimesheetTimer}
                               disabled={!activeProject || Boolean(timesheetTimer) || !String(timesheetDraft.task ?? '').trim()}
-                              className="text-xs px-2 rounded border transition disabled:opacity-40"
+                              className="type-command px-2 py-1 rounded border transition disabled:opacity-40"
                               style={{ backgroundColor: S.accent, borderColor: S.accent, color: 'white' }}
                             >
                               Start
@@ -6239,22 +6264,22 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           </div>
                         </div>
                         {timesheetTimer && (
-                          <div className="flex flex-wrap items-center justify-between gap-2 rounded border px-2 py-2" style={S.panel}>
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-l-2 px-2 py-1.5" style={{ borderColor: S.accent, backgroundColor: 'rgba(122, 92, 255, 0.08)' }}>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="mono text-[9px] uppercase tracking-widest" style={{ color: S.dim }}>Running</span>
+                                <span className="type-tiny-label" style={{ color: S.dim }}>Running</span>
                                 <span className="min-w-0 truncate text-sm font-semibold" style={{ color: S.text }}>{timesheetTimer.task}</span>
                                 <span className="mono text-xs tabular-nums" style={{ color: S.accent }}>{formatTimesheetElapsed(timesheetTimerElapsedMs)}</span>
                               </div>
                               <p className="mono mt-1 truncate text-[10px]" style={{ color: S.zinc }}>
-                                Started {formatTimesheetClock(timesheetTimer.startedAt)} · {timesheetTimer.date}
+                                Started {formatTimesheetClock(timesheetTimer.startedAt)} | {timesheetTimer.date}
                               </p>
                             </div>
                             <div className="flex gap-1 shrink-0">
                               <button
                                 type="button"
                                 onClick={endTimesheetTimer}
-                                className="text-xs px-2 py-1 rounded border transition"
+                                className="type-command px-2 py-1 rounded border transition"
                                 style={{ backgroundColor: S.accent, borderColor: S.accent, color: 'white' }}
                               >
                                 End Time
@@ -6262,47 +6287,47 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                               <button
                                 type="button"
                                 onClick={cancelTimesheetTimer}
-                                className="text-xs px-2 py-1 rounded border transition"
-                                style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.zinc }}
+                                className="type-command px-2 py-1 rounded border transition"
+                                style={{ backgroundColor: 'transparent', borderColor: S.border, color: S.zinc }}
                               >
                                 Cancel
                               </button>
                             </div>
                           </div>
                         )}
-                        <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] gap-2">
-                          <div className="flex min-w-0 items-center gap-2 rounded border px-2 py-1" style={S.panel}>
-                            <span className="mono text-[9px] uppercase tracking-widest" style={{ color: S.dim }}>Entries</span>
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-1">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="type-tiny-label" style={{ color: S.dim }}>Entries</span>
                             <span className="text-xs font-semibold tabular-nums" style={{ color: S.text }}>{timesheetEntries.length}</span>
                           </div>
-                          <div className="flex min-w-0 items-center gap-2 rounded border px-2 py-1" style={S.panel}>
-                            <span className="mono text-[9px] uppercase tracking-widest" style={{ color: S.dim }}>Hours</span>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="type-tiny-label" style={{ color: S.dim }}>Hours</span>
                             <span className="text-xs font-semibold tabular-nums" style={{ color: S.text }}>{timesheetTotalHours.toFixed(2)}</span>
                           </div>
-                          <div className="flex min-w-0 items-center gap-2 rounded border px-2 py-1" style={S.panel}>
-                            <span className="mono shrink-0 text-[9px] uppercase tracking-widest" style={{ color: S.dim }}>Project</span>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="type-tiny-label shrink-0" style={{ color: S.dim }}>Project</span>
                             <span className="min-w-0 truncate text-xs font-medium" style={{ color: S.text }}>{activeProject?.name ?? 'None'}</span>
                           </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {timesheetGroups.map(group => (
-                            <div key={group.key} className="rounded border" style={S.panel}>
-                              <div className="flex items-center justify-between gap-2 border-b px-2 py-1.5" style={{ borderColor: S.border }}>
-                                <span className="mono text-[10px] uppercase tracking-widest truncate" style={{ color: S.muted }}>{group.label}</span>
-                                <span className="mono text-[10px] rounded px-1.5 py-0.5 shrink-0" style={{ backgroundColor: '#0D0D0F', color: S.accent, border: `1px solid ${S.border}` }}>
+                            <section key={group.key} className="border-t pt-2" style={{ borderColor: S.border }}>
+                              <div className="flex items-center justify-between gap-2 px-1 pb-1.5">
+                                <span className="type-overline truncate" style={{ color: S.muted }}>{group.label}</span>
+                                <span className="mono text-[10px] shrink-0 tabular-nums" style={{ color: S.accent }}>
                                   {group.totalHours.toFixed(2)}h
                                 </span>
                               </div>
-                              <div className="space-y-1 p-2">
+                              <div className="space-y-1">
                                 {group.entries.map(entry => (
-                                  <div key={entry.id} className="rounded border p-2" style={S.deeper}>
-                                    <div className="grid grid-cols-[1fr_78px_minmax(150px,0.8fr)_auto] gap-2 items-start">
+                                  <div key={entry.id} className="group border-b px-1 py-1.5 last:border-b-0" style={{ borderColor: S.border }}>
+                                    <div className="grid grid-cols-[1fr_72px_minmax(140px,0.75fr)_auto] gap-2 items-start">
                                       <input
                                         value={entry.task}
                                         onChange={event => updateTimesheetEntry(entry.id, 'task', event.target.value)}
                                         placeholder="Task / activity"
-                                        className="min-w-0 rounded border text-xs outline-none"
-                                        style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                                        className="min-w-0 bg-transparent text-xs font-medium outline-none"
+                                        style={{ color: S.text, padding: '4px 2px' }}
                                       />
                                       <input
                                         type="number"
@@ -6311,35 +6336,35 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                         value={entry.hours}
                                         onChange={event => updateTimesheetEntry(entry.id, 'hours', event.target.value)}
                                         placeholder="Hours"
-                                        className="min-w-0 rounded border text-xs outline-none"
-                                        style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px' }}
+                                        className="min-w-0 bg-transparent text-xs outline-none tabular-nums"
+                                        style={{ color: S.text, padding: '4px 2px' }}
                                       />
                                       <textarea
                                         value={entry.note}
                                         onChange={event => updateTimesheetEntry(entry.id, 'note', event.target.value)}
                                         placeholder="Optional note"
                                         rows={getTimesheetNoteRows(entry.note)}
-                                        className="min-w-0 resize-none rounded border text-xs outline-none"
-                                        style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 8px', lineHeight: '16px' }}
+                                        className="min-w-0 resize-none bg-transparent text-xs outline-none"
+                                        style={{ color: S.text, padding: '4px 2px', lineHeight: '16px' }}
                                       />
                                       <button
                                         type="button"
                                         onClick={() => removeTimesheetEntry(entry.id)}
-                                        className="mono text-[10px] px-2 rounded border hover:text-white transition shrink-0"
-                                        style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.zinc }}
+                                        className="type-command shrink-0 opacity-50 transition hover:opacity-100 hover:text-white"
+                                        style={{ color: S.zinc }}
                                       >
                                         Remove
                                       </button>
                                     </div>
                                     {(entry.startTime || entry.endTime) && (
-                                      <p className="mono mt-1 text-[10px]" style={{ color: S.zinc }}>
+                                      <p className="mono mt-0.5 text-[10px]" style={{ color: S.zinc }}>
                                         {formatTimesheetClock(entry.startTime)} - {formatTimesheetClock(entry.endTime)}
                                       </p>
                                     )}
                                   </div>
                                 ))}
                               </div>
-                            </div>
+                            </section>
                           ))}
                           {!timesheetEntries.length && (
                             <p className="mono p-1" style={{ fontSize: '10px', color: S.dim }}>No time entries yet.</p>
@@ -6354,7 +6379,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           value={selectedTpl}
                           onChange={event => setSelectedTpl(event.target.value)}
                           className="w-full rounded border text-xs outline-none"
-                          style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '7px 10px' }}
+                          style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '7px 10px' }}
                         >
                           <option value="">Select template...</option>
                           {templates.map(template => (
@@ -6396,7 +6421,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                   canDelete: group.id !== DEFAULT_TODO_LIST.id && todoLists.length > 1,
                                 })
                               }}
-                              className="mono text-[10px] uppercase tracking-wider truncate"
+                              className="type-overline truncate"
                               style={{ color: S.muted }}
                               title="Right-click to delete this title"
                             >
@@ -6466,7 +6491,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                 style={{ color: item.done ? '#30D158' : S.zinc }}
                                 title={item.done ? 'Mark as not done' : 'Mark as done'}
                               >
-                                {item.done ? '✓' : '○'}
+                                {item.done ? '?' : '?'}
                               </button>
                               {editingTodoItemKey === `${group.id}:${item.id}` ? (
                                 <textarea
@@ -6482,7 +6507,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                                   }}
                                   rows={2}
                                   className="min-w-0 flex-1 resize-none rounded border text-xs font-medium outline-none leading-relaxed"
-                                  style={{ backgroundColor: '#1A1A1E', borderColor: S.accent, color: S.text, padding: '4px 6px', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                                  style={{ backgroundColor: '#26262C', borderColor: S.accent, color: S.text, padding: '4px 6px', overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                                   autoFocus
                                 />
                               ) : (
@@ -6525,7 +6550,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         <div className="group flex items-center gap-1.5">
                           <FileFlagDot flag={getFileFlag(activeProject?.root_path && entry.relativePath ? `${activeProject.root_path}\\${entry.relativePath.replace(/\//g, '\\')}` : '')} />
                           {entry.isDirectory !== undefined && (
-                            <span style={{ fontSize: '12px' }}>{entry.isDirectory ? '📁' : getFileIcon(entry.name)}</span>
+                            <span style={{ fontSize: '12px' }}>{entry.isDirectory ? '[DIR]' : getFileIcon(entry.name)}</span>
                           )}
                           <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{entry.name}</p>
                           <FileNameColumnHandle />
@@ -6541,7 +6566,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         className="p-3 rounded border relative"
                         style={{ backgroundColor: 'rgba(120,53,15,0.05)', borderColor: 'rgba(120,53,15,0.4)' }}
                       >
-                        <div className="absolute top-2 right-2 mono" style={{ fontSize: '10px', color: '#F59E0B' }}>⚠️ Out of Place</div>
+                        <div className="absolute top-2 right-2 mono" style={{ fontSize: '10px', color: '#F59E0B' }}>?? Out of Place</div>
                         <div className="group flex items-center gap-1.5 pr-20">
                           <FileFlagDot flag={getFileFlag(activeProject?.root_path && file.relativePath ? `${activeProject.root_path}\\${file.relativePath.replace(/\//g, '\\')}` : '')} />
                           <p className="text-xs font-medium truncate" style={getFileNameColumnTextStyle({ color: '#E4E4E7' })}>{file.name}</p>
@@ -6625,8 +6650,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             aria-orientation="horizontal"
             title={centerCanvasCollapsed || centerTopCollapsed ? 'Expand center sections' : 'Drag to resize center split'}
             onMouseDown={centerCanvasCollapsed || centerTopCollapsed ? undefined : beginCenterSplitResize}
-            className={`shrink-0 ${(centerCanvasCollapsed || centerTopCollapsed) ? 'cursor-pointer' : 'cursor-row-resize'} hover:bg-[#1F1F23] transition-colors flex items-center justify-center gap-1`}
-            style={{ height: '10px', backgroundColor: '#080809', borderTop: '1px solid #1F1F23', borderBottom: '1px solid #1F1F23' }}
+            className={`shrink-0 ${(centerCanvasCollapsed || centerTopCollapsed) ? 'cursor-pointer' : 'cursor-row-resize'} hover:bg-[#34343A] transition-colors flex items-center justify-center gap-1`}
+            style={{ height: '10px', backgroundColor: '#000000', borderTop: '1px solid #34343A', borderBottom: '1px solid #34343A' }}
           >
             <button
               onMouseDown={event => event.stopPropagation()}
@@ -6635,7 +6660,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               style={{ color: centerTopCollapsed ? S.accent : S.zinc }}
               title={centerTopCollapsed ? 'Expand top panels' : 'Collapse top panels'}
             >
-              {centerTopCollapsed ? '▾' : '▴'}
+              {centerTopCollapsed ? '?' : '?'}
             </button>
             <button
               onMouseDown={event => event.stopPropagation()}
@@ -6644,7 +6669,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               style={{ color: centerCanvasCollapsed ? S.accent : S.zinc }}
               title={centerCanvasCollapsed ? 'Expand canvas' : 'Collapse canvas'}
             >
-              {centerCanvasCollapsed ? '▴' : '▾'}
+              {centerCanvasCollapsed ? '?' : '?'}
             </button>
           </div>}
 
@@ -6669,8 +6694,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
           aria-orientation="vertical"
           title={rightCollapsed ? 'Expand right panel' : 'Drag to resize the right panel'}
           onMouseDown={beginResizeRight}
-          className={`shrink-0 ${rightCollapsed ? 'cursor-pointer' : 'cursor-col-resize'} hover:bg-[#1F1F23] transition-colors flex items-center justify-center`}
-          style={{ width: isBoxPopout ? '0px' : `${SIDE_PANEL_RESIZER_WIDTH}px`, backgroundColor: '#080809' }}
+          className={`shrink-0 ${rightCollapsed ? 'cursor-pointer' : 'cursor-col-resize'} hover:bg-[#34343A] transition-colors flex items-center justify-center`}
+          style={{ width: isBoxPopout ? '0px' : `${SIDE_PANEL_RESIZER_WIDTH}px`, backgroundColor: '#000000' }}
         >
           {!isBoxPopout && <button
             onMouseDown={event => event.stopPropagation()}
@@ -6682,7 +6707,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             style={{ color: S.zinc }}
             title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
           >
-            {rightCollapsed ? '‹' : '›'}
+            {rightCollapsed ? '<' : '>'}
           </button>}
         </div>
 
@@ -6698,9 +6723,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               onDragLeave={() => { if (rightDropTargetKey === 'template') setRightDropTargetKey(null) }}
             >
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'template' && draggingRightSectionKey !== 'template')} />
-              <div className="p-4 border-b flex-1 min-h-0 overflow-y-auto" style={{ borderColor: S.border }}>
+              <div className="p-3 border-b flex-1 min-h-0 overflow-y-auto" style={{ borderColor: S.border }}>
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="mono text-xs uppercase tracking-widest" style={{ color: S.muted }}>📄 Open Template</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>[TMP] Open Template</h3>
                   <span
                     draggable
                     onDragStart={event => beginSectionDrag(event, 'template', setDraggingRightSectionKey)}
@@ -6709,7 +6734,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     style={getSectionHandleStyle(draggingRightSectionKey === 'template')}
                     title="Drag to reorder panel sections"
                   >
-                    ⋮⋮
+                    ::
                   </span>
                 </div>
                 <select
@@ -6726,7 +6751,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     }
                   }}
                   className="w-full rounded border text-sm mb-2 outline-none"
-                  style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '7px 10px' }}
+                  style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '7px 10px' }}
                 >
                   <option value="">Select template file to stage...</option>
                   {templateFiles.map(f => (
@@ -6734,7 +6759,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   ))}
                 </select>
                 {templateFiles.length === 0 && (
-                  <p className="mono text-xs mb-2" style={{ color: S.dim }}>No template files — add in Engine Backend → Template Files</p>
+                    <p className="mono text-xs mb-2" style={{ color: S.dim }}>No template files - add in Engine Backend &gt; Template Files</p>
                 )}
                 {tplToast && (
                   <p className="mt-2 text-xs" style={{ color: tplToast.type === 'ok' ? '#30D158' : '#FF453A' }}>
@@ -6744,7 +6769,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
                 {tplStagingItems.length > 0 && (
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: S.border }}>
-                    <p className="mono text-[10px] uppercase tracking-widest mb-2" style={{ color: S.muted }}>Staged — drag into a folder</p>
+                    <p className="type-overline mb-2" style={{ color: S.muted }}>Staged - drag into a folder</p>
                     <div className="space-y-1.5">
                       {tplStagingItems.map(item => (
                         <div
@@ -6762,9 +6787,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             event.dataTransfer.setData('text/plain', item.sourcePath)
                           }}
                           className="flex items-center gap-2 rounded border px-2 py-1.5 cursor-grab active:cursor-grabbing"
-                          style={{ backgroundColor: '#1A1A1E', borderColor: S.border }}
+                          style={{ backgroundColor: '#26262C', borderColor: S.border }}
                         >
-                          <span style={{ fontSize: '12px' }}>📄</span>
+                          <span style={{ fontSize: '12px' }}>[DOC]</span>
                           <input
                             type="text"
                             value={item.destName}
@@ -6780,7 +6805,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                             className="mono text-[10px] shrink-0 hover:text-white transition"
                             style={{ color: S.zinc }}
                           >
-                            ✕
+                            x
                           </button>
                         </div>
                       ))}
@@ -6801,7 +6826,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'permanentLinks' && draggingRightSectionKey !== 'permanentLinks')} />
               <div className="p-3 border-b overflow-y-auto" style={{ borderColor: S.border }}>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="mono text-xs uppercase tracking-widest" style={{ color: S.muted }}>🔗 Permanent Links</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>[LNK] Permanent Links</h3>
                   <span
                     draggable
                     onDragStart={event => beginSectionDrag(event, 'permanentLinks', setDraggingRightSectionKey)}
@@ -6810,7 +6835,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     style={getSectionHandleStyle(draggingRightSectionKey === 'permanentLinks')}
                     title="Drag to reorder panel sections"
                   >
-                    ⋮⋮
+                    ::
                   </span>
                 </div>
 
@@ -6819,7 +6844,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     type="button"
                     onClick={() => handleAddPermanentQuickLink({ label: '', type: 'folder' })}
                     className="flex-1 mono rounded border px-2 py-1.5 text-[10px] transition hover:border-[#7A5CFF]"
-                    style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.labeltext }}
+                    style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.labeltext }}
                   >
                     + Add Folder
                   </button>
@@ -6827,7 +6852,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     type="button"
                     onClick={() => handleAddPermanentQuickLink({ label: '', type: 'file' })}
                     className="flex-1 mono rounded border px-2 py-1.5 text-[10px] transition hover:border-[#7A5CFF]"
-                    style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.labeltext }}
+                    style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.labeltext }}
                   >
                     + Add File
                   </button>
@@ -6836,7 +6861,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 <div className="space-y-1">
                   {permanentQuickLinks.map(link => (
                     <div key={link.id} className="flex items-center gap-2 rounded border px-2 py-1.5" style={S.deeper}>
-                      <span className="shrink-0" style={{ fontSize: '12px' }}>{link.type === 'file' ? getFileIcon(link.label) : '📁'}</span>
+                      <span className="shrink-0" style={{ fontSize: '12px' }}>{link.type === 'file' ? getFileIcon(link.label) : '[DIR]'}</span>
                       <button
                         type="button"
                         onClick={() => handleOpenPermanentQuickLink(link)}
@@ -6876,7 +6901,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'filing' && draggingRightSectionKey !== 'filing')} />
               <div className="p-3 border-b overflow-y-auto" style={{ borderColor: S.border }}>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="mono text-xs uppercase tracking-widest" style={{ color: S.muted }}>📤 Quick Filing</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>[QF] Quick Filing</h3>
                   <span
                     draggable
                     onDragStart={event => beginSectionDrag(event, 'filing', setDraggingRightSectionKey)}
@@ -6885,7 +6910,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     style={getSectionHandleStyle(draggingRightSectionKey === 'filing')}
                     title="Drag to reorder panel sections"
                   >
-                    ⋮⋮
+                    ::
                   </span>
                 </div>
                 <div className="grid grid-cols-[1fr_auto] gap-2 mb-2">
@@ -6894,7 +6919,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     onChange={event => setQuickFilingDestination(event.target.value)}
                     disabled={!activeProject || filingLoading}
                     className="rounded border text-xs outline-none disabled:opacity-40"
-                    style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '6px 9px' }}
+                    style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '6px 9px' }}
                   >
                     {QUICK_FILING_DESTINATIONS.map(destination => (
                       <option key={destination.key} value={destination.key}>{destination.label}</option>
@@ -6909,7 +6934,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         disabled={filingLoading}
                         className="mono px-3 text-[10px] uppercase transition disabled:opacity-40"
                         style={{
-                          backgroundColor: quickFilingMode === mode ? S.accent : '#1A1A1E',
+                          backgroundColor: quickFilingMode === mode ? S.accent : '#26262C',
                           color: quickFilingMode === mode ? '#fff' : S.zinc,
                         }}
                       >
@@ -6926,7 +6951,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       disabled={!activeProject || filingLoading}
                       placeholder="Custom filing folder"
                       className="min-w-0 flex-1 rounded border text-xs outline-none disabled:opacity-40"
-                      style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '7px 9px' }}
+                      style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '7px 9px' }}
                     />
                     <button
                       type="button"
@@ -6936,7 +6961,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       }}
                       disabled={!activeProject || filingLoading}
                       className="mono text-[10px] px-3 rounded border transition disabled:opacity-40 hover:border-[#3A3A40]"
-                      style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.zinc }}
+                      style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.zinc }}
                     >
                       Browse
                     </button>
@@ -6964,8 +6989,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
                 <div className="mb-2 rounded border" style={S.panel}>
                   <div className="flex items-center justify-between gap-2 px-2 py-1.5" style={{ borderColor: S.border }}>
-                    <span className="mono text-[10px] uppercase tracking-widest" style={{ color: S.muted }}>
-                      Filing List · {quickFilingQueue.length}
+                    <span className="type-overline" style={{ color: S.muted }}>
+                      Filing List - {quickFilingQueue.length}
                     </span>
                     <button
                       type="button"
@@ -6980,7 +7005,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   <div className={`${quickFilingQueue.length ? 'max-h-24 p-1' : 'hidden'} overflow-y-auto space-y-1 border-t`} style={{ borderColor: S.border }}>
                     {quickFilingQueue.map(item => (
                       <div key={item.path} className="flex items-center gap-2 rounded px-2 py-1.5" style={{ backgroundColor: '#0D0D0F' }}>
-                        <span style={{ fontSize: '12px' }}>{item.isDirectory ? '📁' : getFileIcon(item.name)}</span>
+                        <span style={{ fontSize: '12px' }}>{item.isDirectory ? '[DIR]' : getFileIcon(item.name)}</span>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs truncate" style={{ color: S.text }}>{item.name}</p>
                           <p className="mono truncate" style={{ fontSize: '9px', color: S.dim }}>{item.path}</p>
@@ -7006,13 +7031,13 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     onKeyDown={e => e.key === 'Enter' && handleExecuteScript()}
                     placeholder="Outgoing folder label"
                     className="min-w-0 rounded border text-xs outline-none"
-                    style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text, padding: '7px 9px' }}
+                    style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '7px 9px' }}
                   />
                   <button
                     onClick={handleExecuteScript}
                     disabled={filingLoading || !filingName.trim()}
                     className="text-xs px-3 rounded border font-medium transition disabled:opacity-40 whitespace-nowrap"
-                    style={{ backgroundColor: '#1A1A1E', borderColor: S.border, color: S.text }}
+                    style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text }}
                   >
                     {filingLoading ? 'Creating...' : 'Create'}
                   </button>
@@ -7034,9 +7059,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               onDragLeave={() => { if (rightDropTargetKey === 'gemini') setRightDropTargetKey(null) }}
             >
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'gemini' && draggingRightSectionKey !== 'gemini')} />
-              <div className="p-4 flex-1 min-h-0 overflow-y-auto">
+              <div className="p-3 flex-1 min-h-0 overflow-y-auto">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="mono text-xs uppercase tracking-widest" style={{ color: S.muted }}>🔍 Document Summary AI</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>[AI] Document Summary AI</h3>
                   <div className="flex items-center gap-2">
                     {AUDIT_AI_ENABLED && activeProject && (
                       <button
@@ -7046,7 +7071,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         style={{ ...S.elevated, color: geminiAuditRunning ? S.accent : S.muted }}
                         title={geminiKeySet ? 'Run file audit' : 'Gemini API key not set'}
                       >
-                        {geminiAuditRunning ? 'Running…' : 'Run Audit'}
+                        {geminiAuditRunning ? 'Running...' : 'Run Audit'}
                       </button>
                     )}
                     {docAnalysisHistory.length > 0 && (
@@ -7066,7 +7091,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       style={getSectionHandleStyle(draggingRightSectionKey === 'gemini')}
                       title="Drag to reorder panel sections"
                     >
-                      ⋮⋮
+                      ::
                     </span>
                   </div>
                 </div>
@@ -7076,7 +7101,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     <div className="shrink-0 w-3 h-3 rounded-full border-2 animate-spin" style={{ borderColor: S.accent, borderTopColor: 'transparent' }} />
                     <div className="min-w-0">
                       <p className="text-xs font-medium truncate" style={{ color: '#E4E4E7' }}>{docAnalysisPending.fileName}</p>
-                      <p className="mono text-xs" style={{ color: S.dim }}>Analysing…</p>
+                      <p className="mono text-xs" style={{ color: S.dim }}>Analysing...</p>
                     </div>
                   </div>
                 )}
@@ -7084,7 +7109,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 {AUDIT_AI_ENABLED && geminiResults.length > 0 && (
                   <div className="mb-3">
                     <p className="mono text-xs mb-2" style={{ color: S.muted }}>
-                      File Audit {geminiLastTime && <span style={{ color: S.dim }}>· {geminiLastTime}</span>}
+                      File Audit {geminiLastTime && <span style={{ color: S.dim }}>- {geminiLastTime}</span>}
                     </p>
                     <div className="space-y-1.5">
                       {geminiResults.map((r, i) => {
@@ -7093,7 +7118,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                           <div key={i} className="p-2 rounded border text-xs" style={{ ...S.elevated, opacity: r._moved ? 0.4 : 1 }}>
                             <div className="flex items-start gap-2">
                               <span style={{ color: statusColor, flexShrink: 0 }}>
-                                {r.status === 'error' ? '✕' : r.status === 'warning' ? '!' : '✓'}
+                                {r.status === 'error' ? '?' : r.status === 'warning' ? '!' : '?'}
                               </span>
                               <p className="flex-1" style={{ color: '#D4D4D8' }}>{r.message}</p>
                             </div>
@@ -7116,7 +7141,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
                 {docAnalysisHistory.length === 0 && !docAnalysisPending && (!AUDIT_AI_ENABLED || geminiResults.length === 0) && (
                   <p className="mono text-xs" style={{ color: S.dim }}>
-                    No summaries yet — right-click a PDF or Word document and choose <span style={{ color: S.muted }}>Analyse</span> to summarise it.
+                    No summaries yet - right-click a PDF or Word document and choose <span style={{ color: S.muted }}>Analyse</span> to summarise it.
                   </p>
                 )}
 
@@ -7177,9 +7202,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               onDragLeave={() => { if (rightDropTargetKey === 'calendar') setRightDropTargetKey(null) }}
             >
               <div style={getDropIndicatorStyle(rightDropTargetKey === 'calendar' && draggingRightSectionKey !== 'calendar')} />
-              <div className="px-4 py-3 flex-1 min-h-0 overflow-y-auto border-t" style={{ borderColor: S.border }}>
+              <div className="px-3 py-3 flex-1 min-h-0 overflow-y-auto border-t" style={{ borderColor: S.border }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="mono text-xs uppercase tracking-widest" style={{ color: S.muted }}>📅 Calendar</h3>
+                  <h3 className="type-panel-title" style={{ color: S.muted }}>[CAL] Calendar</h3>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setVisibleCalendarMonth(month => addMonths(month, -1))}
@@ -7187,7 +7212,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       style={{ ...S.elevated, color: S.muted }}
                       title="Previous month"
                     >
-                      ‹
+                      {'<'}
                     </button>
                     <button
                       onClick={() => {
@@ -7206,7 +7231,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       style={{ ...S.elevated, color: S.muted }}
                       title="Next month"
                     >
-                      ›
+                      {'>'}
                     </button>
                     <span
                       draggable
@@ -7216,7 +7241,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       style={getSectionHandleStyle(draggingRightSectionKey === 'calendar')}
                       title="Drag to reorder panel sections"
                     >
-                      ⋮⋮
+                      ::
                     </span>
                   </div>
                 </div>
@@ -7244,7 +7269,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         onClick={() => setSelectedCalendarDate(day)}
                         className="relative grid h-8 min-w-0 place-items-center rounded border text-xs font-semibold transition hover:border-[#7A5CFF]"
                         style={{
-                          backgroundColor: isSelected ? '#1A1A1E' : dayColor ? `${dayColor}22` : '#101013',
+                          backgroundColor: isSelected ? '#26262C' : dayColor ? `${dayColor}22` : '#101013',
                           borderColor: isSelected ? S.accent : dayColor ?? (isToday ? '#30D158' : S.border),
                           color: isCurrentMonth ? S.text : S.zinc,
                           opacity: isCurrentMonth ? 1 : 0.55,
@@ -7306,7 +7331,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
                 <div className="mt-3 rounded border p-2" style={S.elevated}>
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <h4 className="mono text-[10px] uppercase tracking-widest" style={{ color: S.muted }}>Upcoming Events</h4>
+                    <h4 className="type-overline" style={{ color: S.muted }}>Upcoming Events</h4>
                     <span className="mono text-[10px]" style={{ color: S.zinc }}>{upcomingCalendarEvents.length}</span>
                   </div>
                   {upcomingCalendarEvents.length === 0 ? (
@@ -7352,8 +7377,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 aria-orientation="horizontal"
                 title="Drag to resize adjacent sections"
                 onMouseDown={event => beginVerticalResize('right-panel-vertical', firstKey, secondKey, event, rightSectionHeights)}
-                className="shrink-0 cursor-row-resize hover:bg-[#1F1F23] transition-colors rounded"
-                style={{ height: '8px', backgroundColor: '#080809', order: index * 2 + 1 }}
+                className="shrink-0 cursor-row-resize hover:bg-[#34343A] transition-colors rounded"
+                style={{ height: '8px', backgroundColor: '#000000', order: index * 2 + 1 }}
               />
             ))}
           </div>
@@ -7386,7 +7411,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
           style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
           onClick={event => { if (event.target === event.currentTarget) setShowEditProject(false) }}
         >
-          <div className="p-6 flex flex-col gap-4" style={{ backgroundColor: '#121214', border: '1px solid #1F1F23', borderRadius: '6px', width: '520px' }}>
+          <div className="p-4 flex flex-col gap-3" style={{ backgroundColor: '#1C1C20', border: '1px solid #34343A', borderRadius: '6px', width: '520px' }}>
             <div className="flex items-center justify-between">
               <span className="font-semibold text-sm" style={{ color: '#F5F5F7' }}>Edit Project</span>
               <button
@@ -7394,7 +7419,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 className="text-xs hover:text-white transition"
                 style={{ color: '#8E8E93' }}
               >
-                ✕
+                ?
               </button>
             </div>
 
@@ -7404,7 +7429,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 value={editProjectForm.name}
                 onChange={event => setEditProjectForm(prev => ({ ...prev, name: event.target.value }))}
                 className="w-full rounded border text-sm outline-none"
-                style={{ backgroundColor: '#1A1A1E', borderColor: '#1F1F23', color: '#F5F5F7', padding: '8px 12px' }}
+                style={{ backgroundColor: '#26262C', borderColor: '#34343A', color: '#F5F5F7', padding: '8px 12px' }}
                 autoFocus
               />
             </div>
@@ -7415,7 +7440,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 value={editProjectForm.description}
                 onChange={event => setEditProjectForm(prev => ({ ...prev, description: event.target.value }))}
                 className="w-full rounded border text-sm outline-none"
-                style={{ backgroundColor: '#1A1A1E', borderColor: '#1F1F23', color: '#F5F5F7', padding: '8px 12px' }}
+                style={{ backgroundColor: '#26262C', borderColor: '#34343A', color: '#F5F5F7', padding: '8px 12px' }}
               />
             </div>
 
@@ -7426,12 +7451,12 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   value={editProjectForm.root_path}
                   onChange={event => setEditProjectForm(prev => ({ ...prev, root_path: event.target.value }))}
                   className="min-w-0 flex-1 rounded border text-sm outline-none"
-                  style={{ backgroundColor: '#1A1A1E', borderColor: '#1F1F23', color: '#F5F5F7', padding: '8px 12px' }}
+                  style={{ backgroundColor: '#26262C', borderColor: '#34343A', color: '#F5F5F7', padding: '8px 12px' }}
                 />
                 <button
                   onClick={handleBrowseEditProjectRoot}
                   className="text-xs px-3 py-2 rounded border hover:border-[#3A3A40] transition shrink-0"
-                  style={{ backgroundColor: '#1A1A1E', borderColor: '#1F1F23', color: '#8E8E93' }}
+                  style={{ backgroundColor: '#26262C', borderColor: '#34343A', color: '#8E8E93' }}
                 >
                   Browse
                 </button>
@@ -7446,7 +7471,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <button
                 onClick={() => setShowEditProject(false)}
                 className="text-xs px-4 py-2 rounded border transition"
-                style={{ backgroundColor: '#1A1A1E', borderColor: '#1F1F23', color: '#8E8E93' }}
+                style={{ backgroundColor: '#26262C', borderColor: '#34343A', color: '#8E8E93' }}
               >
                 Cancel
               </button>
@@ -7475,7 +7500,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             }
           }}
         >
-          <div className="p-6 flex flex-col gap-4" style={{ backgroundColor: '#121214', border: '1px solid #1F1F23', borderRadius: '6px', width: '520px' }}>
+          <div className="p-4 flex flex-col gap-3" style={{ backgroundColor: '#1C1C20', border: '1px solid #34343A', borderRadius: '6px', width: '520px' }}>
             <div className="flex items-center justify-between">
               <span className="font-semibold text-sm" style={{ color: '#F5F5F7' }}>Delete Project</span>
               <button
@@ -7487,7 +7512,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 className="text-xs hover:text-white transition"
                 style={{ color: '#8E8E93' }}
               >
-                ✕
+                ?
               </button>
             </div>
 
@@ -7495,7 +7520,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               Select a DocketOS project to remove. This does not delete files/folders on disk.
             </p>
 
-            <div className="max-h-56 overflow-y-auto rounded border" style={{ borderColor: '#1F1F23', backgroundColor: '#0D0D0F' }}>
+            <div className="max-h-56 overflow-y-auto rounded border" style={{ borderColor: '#34343A', backgroundColor: '#0D0D0F' }}>
               {projects.map(project => {
                 const isSelected = projectToDeleteId === project.id
                 return (
@@ -7507,8 +7532,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     }}
                     className="w-full text-left px-3 py-2 border-b last:border-b-0 transition"
                     style={isSelected
-                      ? { backgroundColor: '#1A1A1E', color: '#F5F5F7', borderColor: '#1F1F23', boxShadow: 'inset 2px 0 0 #7A5CFF' }
-                      : { backgroundColor: '#0D0D0F', color: '#D4D4D8', borderColor: '#1F1F23' }
+                      ? { backgroundColor: '#26262C', color: '#F5F5F7', borderColor: '#34343A', boxShadow: 'inset 2px 0 0 #7A5CFF' }
+                      : { backgroundColor: '#0D0D0F', color: '#D4D4D8', borderColor: '#34343A' }
                     }
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -7538,7 +7563,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   setDeleteProjectError(null)
                 }}
                 className="text-xs px-4 py-2 rounded border transition"
-                style={{ backgroundColor: '#1A1A1E', borderColor: '#1F1F23', color: '#8E8E93' }}
+                style={{ backgroundColor: '#26262C', borderColor: '#34343A', color: '#8E8E93' }}
               >
                 Cancel
               </button>
@@ -7561,8 +7586,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
           style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
         >
           <div
-            className="p-5 flex flex-col gap-3"
-            style={{ backgroundColor: '#121214', border: '1px solid #1F1F23', borderRadius: '6px', width: '380px' }}
+            className="p-4 flex flex-col gap-3"
+            style={{ backgroundColor: '#1C1C20', border: '1px solid #34343A', borderRadius: '6px', width: '380px' }}
             onMouseDown={event => event.stopPropagation()}
             onClick={event => event.stopPropagation()}
           >
@@ -7576,7 +7601,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 className="text-xs hover:text-white transition"
                 style={{ color: '#8E8E93' }}
               >
-                ✕
+                ?
               </button>
             </div>
 
@@ -7590,7 +7615,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               }}
               placeholder="Folder name"
               className="w-full rounded border text-sm outline-none"
-              style={{ backgroundColor: '#1A1A1E', borderColor: '#1F1F23', color: '#F5F5F7', padding: '8px 10px' }}
+              style={{ backgroundColor: '#26262C', borderColor: '#34343A', color: '#F5F5F7', padding: '8px 10px' }}
             />
 
             {folderEditDialog.error && (
@@ -7602,7 +7627,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 type="button"
                 onClick={() => setFolderEditDialog(null)}
                 className="text-xs px-4 py-2 rounded border transition"
-                style={{ backgroundColor: '#1A1A1E', borderColor: '#1F1F23', color: '#8E8E93' }}
+                style={{ backgroundColor: '#26262C', borderColor: '#34343A', color: '#8E8E93' }}
               >
                 Cancel
               </button>
@@ -7620,10 +7645,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
       )}
 
       {docAnalysisPending && (
-        <div className="fixed bottom-5 right-5 z-[150] flex items-center gap-3 rounded-lg border px-4 py-3 shadow-2xl" style={{ backgroundColor: '#121214', borderColor: '#2A2A2E' }}>
+        <div className="fixed bottom-5 right-5 z-[150] flex items-center gap-3 rounded-lg border px-4 py-3 shadow-2xl" style={{ backgroundColor: '#1C1C20', borderColor: '#2A2A2E' }}>
           <div className="shrink-0 w-4 h-4 rounded-full border-2 animate-spin" style={{ borderColor: S.accent, borderTopColor: 'transparent' }} />
           <div className="min-w-0">
-            <p className="text-xs font-medium" style={{ color: '#E4E4E7' }}>Analysing with Gemini…</p>
+            <p className="text-xs font-medium" style={{ color: '#E4E4E7' }}>Analysing with Gemini...</p>
             <p className="text-xs truncate max-w-[220px]" style={{ color: '#71717A' }}>{docAnalysisPending.fileName}</p>
           </div>
         </div>
@@ -7633,17 +7658,17 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
         <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onKeyDown={e => { if (e.key === 'Escape' && !docAnalysisDialog.loading) setDocAnalysisDialog(null) }}>
           <div
             className="rounded-lg border shadow-2xl w-[480px] max-w-[90vw] flex flex-col"
-            style={{ backgroundColor: '#121214', borderColor: '#1F1F23' }}
+            style={{ backgroundColor: '#1C1C20', borderColor: '#34343A' }}
           >
-            <div className="px-5 pt-5 pb-3 border-b" style={{ borderColor: '#1F1F23' }}>
-              <p className="text-sm font-semibold" style={{ color: '#E4E4E7' }}>🔍 Analyse with AI</p>
+            <div className="px-4 pt-4 pb-3 border-b" style={{ borderColor: '#34343A' }}>
+              <p className="text-sm font-semibold" style={{ color: '#E4E4E7' }}>[AI] Analyse with AI</p>
               <p className="text-xs mt-0.5 truncate" style={{ color: '#71717A' }}>
                 {docAnalysisDialog.fileName.length > 50
-                  ? `${docAnalysisDialog.fileName.slice(0, 47)}…`
+                  ? `${docAnalysisDialog.fileName.slice(0, 47)}...`
                   : docAnalysisDialog.fileName}
               </p>
             </div>
-            <div className="px-5 py-4 space-y-4">
+            <div className="px-4 py-3 space-y-3">
               <div>
                 <label className="text-xs font-medium block mb-1.5" style={{ color: '#A1A1AA' }}>
                   What would you like to know?
@@ -7662,7 +7687,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       onClick={() => setDocAnalysisDialog(prev => ({ ...prev, question: prompt }))}
                       disabled={docAnalysisDialog.loading}
                       className="rounded border px-2 py-1 text-xs transition hover:border-[#7A5CFF] hover:text-white disabled:opacity-40"
-                      style={{ backgroundColor: '#1A1A1E', borderColor: docAnalysisDialog.question === prompt ? '#7A5CFF' : '#2A2A2E', color: docAnalysisDialog.question === prompt ? '#C4B5FD' : '#71717A' }}
+                      style={{ backgroundColor: '#26262C', borderColor: docAnalysisDialog.question === prompt ? '#7A5CFF' : '#2A2A2E', color: docAnalysisDialog.question === prompt ? '#C4B5FD' : '#71717A' }}
                     >
                       {prompt}
                     </button>
@@ -7674,9 +7699,9 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   value={docAnalysisDialog.question}
                   onChange={e => setDocAnalysisDialog(prev => ({ ...prev, question: e.target.value }))}
                   disabled={docAnalysisDialog.loading}
-                  placeholder="Or type your own question…"
+                  placeholder="Or type your own question..."
                   className="w-full rounded border px-3 py-2 text-sm outline-none resize-none"
-                  style={{ backgroundColor: '#1A1A1E', borderColor: '#2A2A2E', color: '#E4E4E7' }}
+                  style={{ backgroundColor: '#26262C', borderColor: '#2A2A2E', color: '#E4E4E7' }}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && docAnalysisDialog.question.trim() && !docAnalysisDialog.loading) {
                       handleDocAnalyse()
@@ -7694,7 +7719,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       disabled={docAnalysisDialog.loading}
                       className="px-4 py-1.5 rounded text-xs font-medium transition border"
                       style={{
-                        backgroundColor: docAnalysisDialog.length === opt ? S.accent : '#1A1A1E',
+                        backgroundColor: docAnalysisDialog.length === opt ? S.accent : '#26262C',
                         borderColor: docAnalysisDialog.length === opt ? S.accent : '#2A2A2E',
                         color: docAnalysisDialog.length === opt ? '#fff' : '#A1A1AA',
                       }}
@@ -7714,7 +7739,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                       id: 'gemini-3.5-flash',
                       label: 'Gemini 3.5 Flash',
                       paid: true,
-                      hint: '1M-token context, multimodal vision, context caching — best for long engineering PDFs.',
+                      hint: '1M-token context, multimodal vision, context caching - best for long engineering PDFs.',
                     },
                   ].map(m => {
                     const selected = (docAnalysisDialog.model ?? 'gemini-2.5-flash') === m.id
@@ -7726,7 +7751,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         title={m.hint ?? ''}
                         className="px-3 py-1.5 rounded text-xs font-medium transition border inline-flex items-center gap-1.5"
                         style={{
-                          backgroundColor: selected ? S.accent : '#1A1A1E',
+                          backgroundColor: selected ? S.accent : '#26262C',
                           borderColor: selected ? S.accent : '#2A2A2E',
                           color: selected ? '#fff' : '#A1A1AA',
                         }}
@@ -7734,7 +7759,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                         {m.label}
                         {m.paid && (
                           <span
-                            className="mono uppercase tracking-wider rounded px-1.5 py-0.5"
+                            className="type-tiny-label rounded px-1.5 py-0.5"
                             style={{
                               fontSize: '9px',
                               backgroundColor: selected ? 'rgba(255,255,255,0.18)' : '#3A2A0A',
@@ -7754,7 +7779,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 <p className="text-xs" style={{ color: '#FF453A' }}>{docAnalysisDialog.error}</p>
               )}
             </div>
-            <div className="px-5 pb-5 flex justify-between items-center gap-2">
+            <div className="px-4 pb-4 flex justify-between items-center gap-2">
               <button
                 onClick={() => {
                   if (docAnalysisDialog.question.trim()) {
@@ -7765,17 +7790,17 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   window.api.shellOpenExternal({ url: 'https://copilot.microsoft.com' })
                 }}
                 className="px-3 py-1.5 rounded text-xs border transition flex items-center gap-1.5"
-                style={{ backgroundColor: '#1A1A1E', borderColor: '#2A2A2E', color: '#A1A1AA' }}
-                title="Opens the file's folder in Explorer and Copilot in your browser — drag the file in and paste your question"
+                style={{ backgroundColor: '#26262C', borderColor: '#2A2A2E', color: '#A1A1AA' }}
+                title="Opens the file folder in Explorer and Copilot in your browser - drag the file in and paste your question"
               >
-                🪟 Open in Copilot
+                Open in Copilot
               </button>
               <div className="flex gap-2">
                 <button
                   onClick={() => setDocAnalysisDialog(null)}
                   disabled={docAnalysisDialog.loading}
                   className="px-4 py-1.5 rounded text-xs border transition"
-                  style={{ backgroundColor: '#1A1A1E', borderColor: '#2A2A2E', color: '#A1A1AA' }}
+                  style={{ backgroundColor: '#26262C', borderColor: '#2A2A2E', color: '#A1A1AA' }}
                 >
                   Cancel
                 </button>
@@ -7785,7 +7810,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                   className="px-4 py-1.5 rounded text-xs font-medium transition disabled:opacity-50"
                   style={{ backgroundColor: S.accent, color: '#fff' }}
                 >
-                  {docAnalysisDialog.loading ? 'Analysing…' : 'Analyse'}
+                  {docAnalysisDialog.loading ? 'Analysing...' : 'Analyse'}
                 </button>
               </div>
             </div>
@@ -7797,22 +7822,22 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
         <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onKeyDown={e => { if (e.key === 'Escape') { setDocAnalysisResult(null); setDocResultCopied(false) } }}>
           <div
             className="rounded-lg border shadow-2xl w-[880px] max-w-[92vw] flex flex-col max-h-[85vh]"
-            style={{ backgroundColor: '#121214', borderColor: '#1F1F23' }}
+            style={{ backgroundColor: '#1C1C20', borderColor: '#34343A' }}
           >
-            <div className="px-5 pt-5 pb-3 border-b shrink-0" style={{ borderColor: '#1F1F23' }}>
-              <p className="text-sm font-semibold" style={{ color: '#E4E4E7' }}>🔍 AI Analysis</p>
+            <div className="px-4 pt-4 pb-3 border-b shrink-0" style={{ borderColor: '#34343A' }}>
+              <p className="text-sm font-semibold" style={{ color: '#E4E4E7' }}>[AI] Analysis</p>
               <p className="text-xs mt-0.5 truncate" style={{ color: '#71717A' }}>
                 {docAnalysisResult.fileName.length > 55
-                  ? `${docAnalysisResult.fileName.slice(0, 52)}…`
+                  ? `${docAnalysisResult.fileName.slice(0, 52)}...`
                   : docAnalysisResult.fileName}
               </p>
             </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="flex-1 overflow-y-auto px-4 py-3">
               <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#D4D4D8' }}>
                 {docAnalysisResult.result}
               </p>
             </div>
-            <div className="px-5 pb-5 pt-3 border-t flex justify-between items-center shrink-0" style={{ borderColor: '#1F1F23' }}>
+            <div className="px-4 pb-4 pt-3 border-t flex justify-between items-center shrink-0" style={{ borderColor: '#34343A' }}>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
@@ -7821,7 +7846,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                     setTimeout(() => setDocResultCopied(false), 2000)
                   }}
                   className="px-4 py-1.5 rounded text-xs border transition"
-                  style={{ backgroundColor: '#1A1A1E', borderColor: '#2A2A2E', color: '#A1A1AA' }}
+                  style={{ backgroundColor: '#26262C', borderColor: '#2A2A2E', color: '#A1A1AA' }}
                 >
                   {docResultCopied ? 'Copied!' : 'Copy to Clipboard'}
                 </button>
@@ -7829,7 +7854,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               <button
                 onClick={() => { setDocAnalysisResult(null); setDocResultCopied(false) }}
                 className="px-4 py-1.5 rounded text-xs border transition"
-                style={{ backgroundColor: '#1A1A1E', borderColor: '#2A2A2E', color: '#A1A1AA' }}
+                style={{ backgroundColor: '#26262C', borderColor: '#2A2A2E', color: '#A1A1AA' }}
               >
                 Close
               </button>
@@ -7847,8 +7872,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             width: 'max-content',
             minWidth: 170,
             maxWidth: 'min(280px, calc(100vw - 24px))',
-            backgroundColor: '#121214',
-            borderColor: '#1F1F23',
+            backgroundColor: '#1C1C20',
+            borderColor: '#34343A',
           }}
           onMouseDown={event => event.stopPropagation()}
         >
@@ -7858,10 +7883,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               event.stopPropagation()
               handleSendEntryToQuickFiling(folderContextMenu.entry)
             }}
-            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#1A1A1E] transition"
+            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#303038] transition"
             style={{ color: '#D4D4D8' }}
           >
-            📤 Send to Quick Filing
+            Send to Quick Filing
           </button>
           <button
             onMouseDown={event => {
@@ -7869,13 +7894,13 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               event.stopPropagation()
               handleFolderMenuAddQuickLink()
             }}
-            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#1A1A1E] transition"
+            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#303038] transition"
             style={{ color: '#D4D4D8' }}
           >
-            🔗 Add to Quick Links
+            Add to Quick Links
           </button>
-          <div className="border-t border-b px-3 py-2" style={{ borderColor: '#1F1F23' }}>
-            <div className="mono mb-1 text-[10px] uppercase tracking-widest" style={{ color: S.muted }}>Flag</div>
+          <div className="border-t border-b px-3 py-2" style={{ borderColor: '#34343A' }}>
+            <div className="type-overline mb-1" style={{ color: S.muted }}>Flag</div>
             <div className="grid grid-cols-6 gap-1.5">
               {FILE_FLAG_OPTIONS.map(option => {
                 const active = getFileFlag(folderContextMenu.entry?.fullPath ?? folderContextMenu.entry?.path)?.color === option.key
@@ -7916,10 +7941,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               event.stopPropagation()
               handleFolderMenuOpenInExplorer()
             }}
-            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#1A1A1E] transition"
+            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#303038] transition"
             style={{ color: '#D4D4D8' }}
           >
-            {folderContextMenu.entry?.isDirectory ? '📂 Open in Explorer' : '📄 Open'}
+            {folderContextMenu.entry?.isDirectory ? 'Open in Explorer' : 'Open'}
           </button>
           {!folderContextMenu.entry?.isDirectory && (
             <button
@@ -7928,10 +7953,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 event.stopPropagation()
                 handleFolderMenuShowInExplorer()
               }}
-              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#1A1A1E] transition"
+              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#303038] transition"
               style={{ color: '#D4D4D8' }}
             >
-              📂 Show in Explorer
+              Show in Explorer
             </button>
           )}
           {folderContextMenu.entry?.isDirectory && (
@@ -7941,10 +7966,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 event.stopPropagation()
                 handleFolderMenuNewSubfolder()
               }}
-              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#1A1A1E] transition"
+              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#303038] transition"
               style={{ color: '#D4D4D8' }}
             >
-              ➕ New Subfolder
+              New Subfolder
             </button>
           )}
           {folderContextMenu.entry?.isDirectory && (
@@ -7954,10 +7979,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 event.stopPropagation()
                 handleFolderMenuRename()
               }}
-              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#1A1A1E] transition"
+              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#303038] transition"
               style={{ color: '#D4D4D8' }}
             >
-              ✏️ Rename
+              Rename
             </button>
           )}
           {isAnalysableEntry(folderContextMenu.entry) && (
@@ -7976,10 +8001,10 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 })
                 setFolderContextMenu(null)
               }}
-              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#1A1A1E] transition"
+              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm hover:bg-[#303038] transition"
               style={{ color: '#D4D4D8' }}
             >
-              🔍 Analyse with AI
+              Analyse with AI
             </button>
           )}
         </div>
@@ -7994,8 +8019,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             width: 'max-content',
             minWidth: 140,
             maxWidth: 'min(240px, calc(100vw - 24px))',
-            backgroundColor: '#121214',
-            borderColor: '#1F1F23',
+            backgroundColor: '#1C1C20',
+            borderColor: '#34343A',
           }}
           onMouseDown={event => event.stopPropagation()}
         >
@@ -8006,7 +8031,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
                 event.stopPropagation()
                 handleTodoContextExport()
               }}
-              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm transition hover:bg-[#1A1A1E]"
+              className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm transition hover:bg-[#303038]"
               style={{ color: S.text }}
               title={todoContextMenu.label}
             >
@@ -8020,7 +8045,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               event.stopPropagation()
               handleTodoContextDelete()
             }}
-            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1A1A1E]"
+            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#303038]"
             style={{ color: '#FF453A' }}
             title={todoContextMenu.type === 'list' && !todoContextMenu.canDelete ? 'The default or only task list cannot be deleted' : todoContextMenu.label}
           >
@@ -8038,8 +8063,8 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
             width: 'max-content',
             minWidth: 150,
             maxWidth: 'min(260px, calc(100vw - 24px))',
-            backgroundColor: '#121214',
-            borderColor: '#1F1F23',
+            backgroundColor: '#1C1C20',
+            borderColor: '#34343A',
           }}
           onMouseDown={event => event.stopPropagation()}
         >
@@ -8049,7 +8074,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               event.stopPropagation()
               handleNoteContextExport()
             }}
-            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm transition hover:bg-[#1A1A1E]"
+            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm transition hover:bg-[#303038]"
             style={{ color: S.text }}
             title={noteContextMenu.label}
           >
@@ -8062,7 +8087,7 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
               event.stopPropagation()
               handleNoteContextDelete()
             }}
-            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1A1A1E]"
+            className="block w-full whitespace-nowrap text-left px-3 py-2 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#303038]"
             style={{ color: '#FF453A' }}
             title={noteContextMenu.canDelete ? noteContextMenu.label : 'The only note section cannot be deleted'}
           >
