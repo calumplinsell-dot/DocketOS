@@ -5000,6 +5000,112 @@ export default function Dashboard({ onOpenSettings, popoutBoxKey = null, popoutS
 
         <div className="flex items-center gap-2">
           {!isBoxPopout && shouldLoadCenterBoxes && (
+            <div className="relative" onMouseDown={event => event.stopPropagation()}>
+              <button
+                onClick={() => setShowLayoutsPopover(prev => !prev)}
+                className="mono text-[10px] px-2.5 py-1.5 rounded border hover:border-[#3A3A40] hover:text-white transition"
+                style={{ ...S.elevated, color: S.zinc }}
+                title="Save or load panel layout presets"
+              >
+                Layouts ▾
+              </button>
+              {showLayoutsPopover && (() => {
+                const presets = loadLayoutPresets()
+                return (
+                  <div
+                    className="absolute right-0 top-full mt-1 w-64 rounded border shadow-2xl z-50 overflow-hidden"
+                    style={{ backgroundColor: '#1C1C20', borderColor: S.border }}
+                  >
+                    <div className="px-3 py-2 border-b" style={{ borderColor: S.border }}>
+                      <span className="mono text-[10px] uppercase tracking-widest" style={{ color: S.muted }}>
+                        Saved Layouts
+                      </span>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {presets.length === 0 && (
+                        <p className="mono px-3 py-3 text-[10px]" style={{ color: S.dim }}>
+                          No saved layouts
+                        </p>
+                      )}
+                      {presets.map(preset => (
+                        <div
+                          key={preset.id}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-[#26262C] transition group"
+                        >
+                          <button
+                            className="min-w-0 flex-1 text-left text-xs truncate hover:text-white transition"
+                            style={{ color: S.text }}
+                            title={`Saved ${new Date(preset.savedAt).toLocaleString()}`}
+                            onClick={() => {
+                              applyLayoutPreset(preset)
+                              setShowLayoutsPopover(false)
+                            }}
+                          >
+                            {preset.name}
+                          </button>
+                          <button
+                            className="mono text-[10px] px-1.5 py-0.5 rounded border opacity-0 group-hover:opacity-100 transition hover:text-white"
+                            style={{ ...S.elevated, color: S.zinc, borderColor: S.border }}
+                            title="Load this layout"
+                            onClick={() => {
+                              applyLayoutPreset(preset)
+                              setShowLayoutsPopover(false)
+                            }}
+                          >
+                            Load
+                          </button>
+                          <button
+                            className="mono text-[10px] opacity-0 group-hover:opacity-100 transition hover:text-white"
+                            style={{ color: S.muted }}
+                            title="Delete this preset"
+                            onClick={() => {
+                              deleteLayoutPreset(preset.id)
+                              setShowLayoutsPopover(false)
+                              setShowLayoutsPopover(true)
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t px-3 py-2 flex items-center gap-2" style={{ borderColor: S.border }}>
+                      <input
+                        value={newPresetName}
+                        onChange={event => setNewPresetName(event.target.value)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter' && newPresetName.trim()) {
+                            saveLayoutPreset(newPresetName.trim())
+                            setNewPresetName('')
+                            setShowLayoutsPopover(false)
+                            setShowLayoutsPopover(true)
+                          }
+                        }}
+                        placeholder="Preset name…"
+                        className="flex-1 min-w-0 rounded border text-xs outline-none"
+                        style={{ backgroundColor: '#26262C', borderColor: S.border, color: S.text, padding: '5px 8px' }}
+                      />
+                      <button
+                        disabled={!newPresetName.trim()}
+                        onClick={() => {
+                          if (!newPresetName.trim()) return
+                          saveLayoutPreset(newPresetName.trim())
+                          setNewPresetName('')
+                          setShowLayoutsPopover(false)
+                          setShowLayoutsPopover(true)
+                        }}
+                        className="mono text-[10px] px-2 py-1 rounded border transition disabled:opacity-40 hover:border-[#7A5CFF] hover:text-white"
+                        style={{ ...S.elevated, color: S.zinc }}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+          {!isBoxPopout && shouldLoadCenterBoxes && (
             <button
               onClick={addCenterPanelBox}
               className="mono text-[10px] px-2.5 py-1.5 rounded border hover:border-[#7A5CFF] hover:text-white transition"
